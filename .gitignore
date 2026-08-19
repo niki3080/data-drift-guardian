@@ -1,0 +1,5 @@
+# Локальные исходные датасеты
+data/train_transaction.csv
+
+# Служебные файлы macOS
+.DS_Store
