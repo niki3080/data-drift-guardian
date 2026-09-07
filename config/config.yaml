@@ -1,0 +1,42 @@
+features:
+  age:
+    type: numeric
+    metrics:
+      - missing_rate
+      - psi
+      - mean_zscore
+
+  income:
+    type: numeric
+    metrics:
+      - missing_rate
+      - psi
+      - mean_zscore
+
+  country:
+    type: categorical
+    metrics:
+      - missing_rate
+      - psi
+      - unseen_category_rate
+      - cardinality_ratio
+
+prediction_metrics:
+  enabled: true
+  score_column: prediction_score
+  threshold: 0.5
+  metrics:
+    - prediction_score_drift
+    - positive_prediction_rate
+
+thresholds:
+  psi:
+    warning: 0.1
+    critical: 0.25
+  mean_zscore:
+    warning: 2.0
+    critical: 3.0
+  unseen_category_rate:
+    warning: 0.05
+    critical: 0.1
+
