@@ -1,5 +1,6 @@
 # Локальные исходные датасеты
 data
+data/
 
 # Служебные файлы macOS
 .DS_Store
@@ -12,3 +13,7 @@ yulia_notes
 examples
 
 src/engine.py
+
+docker-compose.yml
+
+monitorintg/grafana/backup
