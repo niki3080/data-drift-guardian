@@ -1,4 +1,4 @@
-from config.parse_config import Metric
+from drift_guardian.core.parse_config import Metric
 
 from typing import Protocol
 

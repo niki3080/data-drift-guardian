@@ -6,9 +6,17 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = []
 
+[project.scripts]
+drift-guardian-report = "drift_guardian.reporting.offline_report:main"
+
+[build-system]
+requires = ["uv_build>=0.11.0,<0.12"]
+build-backend = "uv_build"
+
 [dependency-groups]
 dev = [
     "ipykernel>=7.3.0",
+    "rich>=15.0.0",
 ]
 notebooks = [
     "evidently>=0.7.21",

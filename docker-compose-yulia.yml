@@ -1,0 +1,46 @@
+name: drift_guardian
+
+services:
+  drift-mock-exporter:
+    build:
+      context: ./monitoring/mock_exporter
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - drift-mock-exporter
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
+      GF_AUTH_ANONYMOUS_HIDE_VERSION: "true"
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+      # Dashboard provisioning — включить после завершения разработки
+      # - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      # - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+
+      # Пока подключаем только конфигурацию Prometheus datasource
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+  
+    depends_on:
+      - prometheus
+
+volumes:
+  grafana-data:

@@ -1,0 +1,59 @@
+{
+  "_comment": "Mock report. The metadata values must be supplied by DriftMetricsEngine.",
+  "metadata": {
+    "_comment": "TODO: agree on these fields and their source with the report producer.",
+    "dataset_name": "Real Estate Dataset",
+    "generated_at": "2026-09-08T12:00:00Z",
+    "reference_rows": 123000,
+    "current_rows": 58000
+  },
+  "overall_status": "critical",
+  "active_alerts": 3,
+  "window_size": 1000,
+  "features": {
+    "age": {
+      "type": "numeric",
+      "status": "critical",
+      "metrics": {
+        "psi": 0.31,
+        "missing_rate": 0.01,
+        "mean_zscore": 3.4
+      },
+      "alerts": [
+        "psi_critical",
+        "mean_zscore_critical"
+      ]
+    },
+    "income": {
+      "type": "numeric",
+      "status": "passed",
+      "metrics": {
+        "psi": 0.04,
+        "missing_rate": 0.03,
+        "mean_zscore": 0.7
+      },
+      "alerts": []
+    },
+    "country": {
+      "type": "categorical",
+      "status": "critical",
+      "metrics": {
+        "psi": 0.18,
+        "missing_rate": 0.0,
+        "unseen_category_rate": 0.12,
+        "cardinality_ratio": 1.5
+      },
+      "alerts": [
+        "unseen_category_rate_critical"
+      ]
+    }
+  },
+  "prediction": {
+    "status": "passed",
+    "metrics": {
+      "prediction_score_drift": 0.08,
+      "positive_prediction_rate": 0.41
+    },
+    "alerts": []
+  }
+}

@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Data Drift Guardian Report</title>
+    <style>
+/* Offline report styles. */
+
+:root {
+    color-scheme: light;
+    --background: #f4f6f8;
+    --surface: #ffffff;
+    --border: #dfe3e8;
+    --text: #17202a;
+    --muted: #667085;
+    --passed-background: #edf8f1;
+    --passed-border: #6fa784;
+    --passed-text: #14532d;
+    --warning-background: #fff8df;
+    --warning-border: #d5ad36;
+    --warning-text: #713f12;
+    --critical-background: #fff0f0;
+    --critical-border: #d46a6a;
+    --critical-text: #7f1d1d;
+    --unknown-background: #f2f4f7;
+    --unknown-border: #98a2b3;
+    --unknown-text: #344054;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--background);
+    color: var(--text);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.5;
+}
+
+.report-container {
+    width: min(1180px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 40px 0 64px;
+}
+
+.report-header {
+    margin-bottom: 32px;
+}
+
+.eyebrow {
+    margin: 0 0 6px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+h1,
+h2 {
+    margin-top: 0;
+}
+
+h1 {
+    margin-bottom: 0;
+    font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.15;
+}
+
+h2 {
+    margin-bottom: 16px;
+    font-size: 22px;
+}
+
+section {
+    margin-bottom: 24px;
+    padding: 24px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+}
+
+.metadata-grid {
+    margin-top: 12px;
+}
+
+.summary-card {
+    display: flex;
+    min-height: 108px;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+}
+
+.summary-label {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.summary-value {
+    margin-top: 8px;
+    font-size: 25px;
+    line-height: 1.2;
+}
+
+.status-passed {
+    border-color: var(--passed-border);
+    background: var(--passed-background);
+    color: var(--passed-text);
+}
+
+.status-warning {
+    border-color: var(--warning-border);
+    background: var(--warning-background);
+    color: var(--warning-text);
+}
+
+.status-critical {
+    border-color: var(--critical-border);
+    background: var(--critical-background);
+    color: var(--critical-text);
+}
+
+.status-unknown {
+    border-color: var(--unknown-border);
+    background: var(--unknown-background);
+    color: var(--unknown-text);
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+th,
+td {
+    padding: 13px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+}
+
+thead th {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+tbody tr:last-child th,
+tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 9px;
+    border: 1px solid;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.metric-name {
+    color: var(--muted);
+}
+
+.alert-list {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--critical-text);
+}
+
+.status-passed-text {
+    color: var(--passed-text);
+}
+
+.muted,
+.empty-state {
+    color: var(--muted);
+}
+
+.prediction-panel {
+    display: grid;
+    grid-template-columns: auto minmax(220px, 1fr) minmax(180px, 1fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.empty-state {
+    margin: 0;
+    padding: 24px;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    text-align: center;
+}
+
+@media (max-width: 720px) {
+    .report-container {
+        width: min(100% - 20px, 1180px);
+        padding-top: 24px;
+    }
+
+    section {
+        padding: 16px;
+    }
+
+    .prediction-panel {
+        grid-template-columns: 1fr;
+    }
+}
+
+    </style>
+</head>
+<body>
+    <main class="report-container">
+        <header class="report-header">
+            <p class="eyebrow">Data Drift Guardian</p>
+            <h1>Offline Monitoring Report</h1>
+        </header>
+
+        <section aria-labelledby="summary-title">
+            <h2 id="summary-title">Overview</h2>
+            <div class="card-grid">
+        <article class="summary-card status-critical">
+            <span class="summary-label">Overall status</span>
+            <strong class="summary-value">CRITICAL</strong>
+        </article>
+    
+        <article class="summary-card">
+            <span class="summary-label">Active alerts</span>
+            <strong class="summary-value">3</strong>
+        </article>
+    
+        <article class="summary-card">
+            <span class="summary-label">Monitored features</span>
+            <strong class="summary-value">3</strong>
+        </article>
+    
+        <article class="summary-card">
+            <span class="summary-label">Window size</span>
+            <strong class="summary-value">1000</strong>
+        </article>
+    </div>
+            <div class="card-grid metadata-grid">
+        <article class="summary-card">
+            <span class="summary-label">Dataset</span>
+            <strong class="summary-value">Real Estate Dataset</strong>
+        </article>
+    
+        <article class="summary-card">
+            <span class="summary-label">Generated at</span>
+            <strong class="summary-value">2026-09-08T12:00:00Z</strong>
+        </article>
+    
+        <article class="summary-card">
+            <span class="summary-label">Reference rows</span>
+            <strong class="summary-value">123000</strong>
+        </article>
+    
+        <article class="summary-card">
+            <span class="summary-label">Current rows</span>
+            <strong class="summary-value">58000</strong>
+        </article>
+    </div>
+        </section>
+
+        <section aria-labelledby="features-title">
+            <h2 id="features-title">Feature monitoring</h2>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Metrics</th>
+                            <th>Alerts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            <tr>
+                <th scope="row">age</th>
+                <td>numeric</td>
+                <td><span class="status-badge status-critical">CRITICAL</span></td>
+                <td><span class="metric-name">psi</span>: 0.310<br><span class="metric-name">missing_rate</span>: 0.010<br><span class="metric-name">mean_zscore</span>: 3.400</td>
+                <td><ul class="alert-list"><li>psi_critical</li><li>mean_zscore_critical</li></ul></td>
+            </tr>
+            
+            <tr>
+                <th scope="row">income</th>
+                <td>numeric</td>
+                <td><span class="status-badge status-passed">PASSED</span></td>
+                <td><span class="metric-name">psi</span>: 0.040<br><span class="metric-name">missing_rate</span>: 0.030<br><span class="metric-name">mean_zscore</span>: 0.700</td>
+                <td><span class="status-text status-passed-text">No alerts</span></td>
+            </tr>
+            
+            <tr>
+                <th scope="row">country</th>
+                <td>categorical</td>
+                <td><span class="status-badge status-critical">CRITICAL</span></td>
+                <td><span class="metric-name">psi</span>: 0.180<br><span class="metric-name">missing_rate</span>: 0.000<br><span class="metric-name">unseen_category_rate</span>: 0.120<br><span class="metric-name">cardinality_ratio</span>: 1.500</td>
+                <td><ul class="alert-list"><li>unseen_category_rate_critical</li></ul></td>
+            </tr>
+            </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section aria-labelledby="prediction-title">
+            <h2 id="prediction-title">Prediction monitoring</h2>
+            <div class="prediction-panel">
+                <span class="status-badge status-passed">
+                    PASSED
+                </span>
+                <div><span class="metric-name">prediction_score_drift</span>: 0.080<br><span class="metric-name">positive_prediction_rate</span>: 0.410</div>
+                <div><span class="status-text status-passed-text">No alerts</span></div>
+            </div>
+        </section>
+
+        <section aria-labelledby="details-title">
+            <h2 id="details-title">Feature details</h2>
+            <p class="empty-state">
+                Interactive Plotly charts will be added when feature distributions
+                become available in the drift report.
+            </p>
+        </section>
+    </main>
+</body>
+</html>

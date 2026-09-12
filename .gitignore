@@ -1,5 +1,14 @@
 # Локальные исходные датасеты
-data/train_transaction.csv
+data
 
 # Служебные файлы macOS
 .DS_Store
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+yulia_notes
+examples
+
+src/engine.py
