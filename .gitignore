@@ -3,3 +3,8 @@ data/train_transaction.csv
 
 # Служебные файлы macOS
 .DS_Store
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
