@@ -8,7 +8,8 @@ from pandas.api.types import (
     is_timedelta64_dtype,
     is_period_dtype,
     is_numeric_dtype,
-    is_bool_dtype
+    is_bool_dtype,
+    is_integer_dtype,
 )
 
 import numpy as np
@@ -24,8 +25,9 @@ class Profiler:
         target: str | None = None,
         merge_threshold: int = 5,
         low_cardinality_threshold: int = 15,
-        sample_dtype="float32",
-        random_state: int | None = None
+        take_sample: bool = True,
+        sample_float_dtype="float32",
+        random_state: int | None = None,
     ):
         if not isinstance(ref_data, pd.DataFrame):
             raise ValueError("ref_data must be provided in pandas DataFrame format")
@@ -106,23 +108,29 @@ class Profiler:
                 f"got {low_cardinality_threshold}"
             )
 
+        # Validate take_sample
+        if not isinstance(take_sample, bool):
+            raise ValueError(f"sample must be bool, got {type(take_sample)}")
+
         # Validate sample dtype
-        if not isinstance(sample_dtype, str):
-            raise ValueError(f"sample_dtype must be str, got {type(sample_dtype)}")
+        if not isinstance(sample_float_dtype, str):
+            raise ValueError(
+                f"sample_dtype must be str, got {type(sample_float_dtype)}"
+            )
 
         try:
-            sample_dtype_np = np.dtype(sample_dtype)
+            sample_dtype_np = np.dtype(sample_float_dtype)
         except TypeError as exc:
             raise ValueError(
-                f"Invalid numpy dtype for sample_dtype: {sample_dtype}"
+                f"Invalid numpy dtype for sample_dtype: {sample_float_dtype}"
             ) from exc
 
         if not np.issubdtype(sample_dtype_np, np.floating):
             raise ValueError(
-                f"sample_dtype must be a numpy floating dtype, got {sample_dtype}"
+                f"sample_dtype must be a numpy floating dtype, got {sample_float_dtype}"
             )
 
-         # Validate random_state
+        # Validate random_state
         if not isinstance(random_state, int | None) or isinstance(random_state, bool):
             raise ValueError(
                 f"random_state must be int or None, got {type(random_state)}"
@@ -135,11 +143,11 @@ class Profiler:
                 "must be provided. Nothing to profile."
             )
 
-        self.ref_data = ref_data
         self.window_size = window_size
         self.num_features = num_features
         self.cat_features = cat_features
-        self.sample_dtype = sample_dtype
+        self.take_sample = take_sample
+        self.sample_float_dtype = sample_float_dtype
         self.merge_threshold = merge_threshold
         self.low_cardinality_threshold = low_cardinality_threshold
         self.random_state = random_state
@@ -152,24 +160,31 @@ class Profiler:
             if num_col not in columns_set:
                 not_met_num_cols.append(num_col)
                 continue
-            
-            if time_dtype := self.check_for_time_dtype(num_col):
-                raise ValueError(f"Num feature: {num_col} has dtype: {time_dtype} which is time dtype. Time dtypes are unsupported.")
+
+            if time_dtype := self.check_for_time_dtype(ref_data, num_col):
+                raise ValueError(
+                    f"Num feature: {num_col} has dtype: {time_dtype} which is time dtype. Time dtypes are unsupported."
+                )
 
             if not is_numeric_dtype(ref_data[num_col]):
-                raise ValueError(f"Col: {num_col} is mentioned in num_features, but doesn't have numeric dtype.")
+                raise ValueError(
+                    f"Col: {num_col} is mentioned in num_features, but doesn't have numeric dtype."
+                )
 
             if is_bool_dtype(ref_data[num_col]):
-                raise ValueError(f"Col: {num_col} is mentioned in num_features, but has bool dtype.")
+                raise ValueError(
+                    f"Col: {num_col} is mentioned in num_features, but has bool dtype."
+                )
 
         for cat_col in self.cat_features:
             if cat_col not in columns_set:
                 not_met_cat_cols.append(cat_col)
                 continue
 
-            if time_dtype := self.check_for_time_dtype(cat_col):
-                raise ValueError(f"Cat feature: {cat_col} has dtype: {time_dtype} which is time dtype. Time dtypes are unsupported.")
-    
+            if time_dtype := self.check_for_time_dtype(ref_data, cat_col):
+                raise ValueError(
+                    f"Cat feature: {cat_col} has dtype: {time_dtype} which is time dtype. Time dtypes are unsupported."
+                )
 
         error_message = ""
         if target is not None and target not in columns_set:
@@ -208,27 +223,31 @@ class Profiler:
 
         self.target = target
         if target is not None:
-            if time_dtype := self.check_for_time_dtype(self.target):
-                raise ValueError(f"Target col: {self.target} has dtype: {time_dtype} which is time dtype. Time dtypes are unsupported.")
+            if time_dtype := self.check_for_time_dtype(ref_data, self.target):
+                raise ValueError(
+                    f"Target col: {self.target} has dtype: {time_dtype} which is time dtype. Time dtypes are unsupported."
+                )
 
             if target in self.num_features and not is_numeric_dtype(ref_data[target]):
-                raise ValueError(f"Target mentioned in num_features but doesn't have numeric dtype")
+                raise ValueError(
+                    f"Target mentioned in num_features but doesn't have numeric dtype"
+                )
 
             if target not in self.num_features and target not in self.cat_features:
-                target_type = (
-                    "num" if is_numeric_dtype(ref_data[target]) else "cat"
-                )
+                target_type = "num" if is_numeric_dtype(ref_data[target]) else "cat"
                 if target_type == "num" and target not in self.num_features:
                     self.num_features.append(target)
                 elif target_type == "cat" and target not in self.cat_features:
                     self.cat_features.append(target)
 
+        self.ref_data = ref_data[
+            num_features + cat_features
+        ]  # target уже в одной из них
 
     def profile_ref_data(self):
 
         cat_ref = {}
         num_ref = {}
-        samples = {}
 
         target_ref = {}
 
@@ -255,10 +274,6 @@ class Profiler:
 
             if col != self.target:
                 num_ref[col] = num_result
-                sample = self.build_reference_sample(
-                    ref_data[col].values, self.window_size, self.sample_dtype, random_state=self.random_state
-                )
-                samples[col] = sample
             else:
                 target_ref["type"] = "num"
                 target_ref[col] = num_result
@@ -270,26 +285,46 @@ class Profiler:
                 f"Missing values in target. Missing rate: {missing_rate}", UserWarning
             )
 
-        return cat_ref, num_ref, samples, target_ref
+        if self.take_sample:
+            sample = self.build_reference_sample(
+                ref_data, self.window_size, random_state=self.random_state
+            )
+            sample = self.compress_df(sample)
+        else:
+            sample = self.ref_data
+
+        return cat_ref, num_ref, sample, target_ref
 
     @staticmethod
     def build_reference_sample(
-        full_values: np.ndarray,
+        full_values: pd.DataFrame,
         window_size: int,
-        dtype="float32",
         min_size: int = 5000,
         multiplier: int = 10,
-        random_state: int | None = None
-    ) -> np.ndarray:
+        random_state: int | None = None,
+    ) -> pd.DataFrame:
         target_size = max(min_size, multiplier * window_size)
-        full_values = full_values[~pd.isna(full_values)]
-        if len(full_values) <= target_size:
-            sample = full_values
-        else:
+        if len(full_values) > target_size:
             rng = np.random.default_rng(random_state)
             idx = rng.choice(len(full_values), size=target_size, replace=False)
-            sample = full_values[idx]
-        return np.sort(sample.astype(dtype))
+            full_values = full_values.iloc[idx]
+        return full_values
+
+    def compress_df(self, sample: pd.DataFrame) -> pd.DataFrame:
+        sample_float_dtype = self.sample_float_dtype
+        dtypes = {col: "category" for col in self.cat_features}
+
+        for col in sample.select_dtypes(include="number").columns:
+            s = sample[col]
+            is_whole = is_integer_dtype(s) or (s.dropna() % 1 == 0).all()
+
+            if is_whole:
+                downcast = "unsigned" if s.min() >= 0 else "integer"
+                dtypes[col] = pd.to_numeric(s, downcast=downcast).dtype
+            else:
+                dtypes[col] = sample_float_dtype
+
+        return sample.astype(dtypes)
 
     def _profile_cat_feature(self, cat_feature):
         # Дополнительно в расчете PSI добавить сглаживание и cap на бакет для случая сумма < merge_threshold
@@ -339,8 +374,9 @@ class Profiler:
 
         return result
 
-    def check_for_time_dtype(self, col):
-        dtype = self.ref_data[col].dtype
+    @staticmethod
+    def check_for_time_dtype(ref_data, col):
+        dtype = ref_data[col].dtype
         if is_datetime64_any_dtype(dtype):
             return dtype
         elif is_timedelta64_dtype(dtype):
