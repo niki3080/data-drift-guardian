@@ -7,6 +7,11 @@ scrape_configs:
       - targets:
           - localhost:9090
 
+  - job_name: analyzer
+    static_configs:
+      - targets:
+          - analyzer:8000
+
   - job_name: drift-mock-exporter
     static_configs:
       - targets:
