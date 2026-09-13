@@ -22,7 +22,7 @@ class Profiler:
         window_size: int,
         num_features: list | None = None,
         cat_features: list | None = None,
-        target: str | None = None,
+        prediction: str | None = None,
         merge_threshold: int = 5,
         low_cardinality_threshold: int = 15,
         take_sample: bool = True,
@@ -64,15 +64,15 @@ class Profiler:
                 f"{sorted(overlap)}"
             )
 
-        # Validate target
-        if not isinstance(target, str | None):
-            raise ValueError(f"target must be string or None, got {type(target)}")
+        # Validate prediction
+        if not isinstance(prediction, str | None):
+            raise ValueError(f"prediction must be string or None, got {type(prediction)}")
 
-        # Target cannot be explicitly specified in both feature groups
-        if target is not None and target in num_features and target in cat_features:
+        # Prediction cannot be explicitly specified in both feature groups
+        if prediction is not None and prediction in num_features and prediction in cat_features:
             raise ValueError(
-                f"Target '{target}' is provided in both num_features and cat_features. "
-                "Choose one or leave target out of feature lists."
+                f"Prediction '{prediction}' is provided in both num_features and cat_features. "
+                "Choose one or leave prediction out of feature lists."
             )
 
         # Validate window_size
@@ -137,9 +137,9 @@ class Profiler:
             )
 
         # At least one thing must be profiled
-        if not num_features and not cat_features and target is None:
+        if not num_features and not cat_features and prediction is None:
             raise ValueError(
-                "Something from num_features, cat_features or target "
+                "Something from num_features, cat_features or prediction "
                 "must be provided. Nothing to profile."
             )
 
@@ -187,8 +187,8 @@ class Profiler:
                 )
 
         error_message = ""
-        if target is not None and target not in columns_set:
-            error_message = error_message + f"Target: {[target]} is missing in ref_data"
+        if prediction is not None and prediction not in columns_set:
+            error_message = error_message + f"Prediction: {[prediction]} is missing in ref_data"
 
         if not_met_num_cols:
             if error_message:
@@ -221,44 +221,44 @@ class Profiler:
         if error_message:
             raise ValueError(error_message)
 
-        self.target = target
-        if target is not None:
-            if time_dtype := self.check_for_time_dtype(ref_data, self.target):
+        self.prediction = prediction
+        if prediction is not None:
+            if time_dtype := self.check_for_time_dtype(ref_data, self.prediction):
                 raise ValueError(
-                    f"Target col: {self.target} has dtype: {time_dtype} which is time dtype. Time dtypes are unsupported."
+                    f"Prediction col: {self.prediction} has dtype: {time_dtype} which is time dtype. Time dtypes are unsupported."
                 )
 
-            if target in self.num_features and not is_numeric_dtype(ref_data[target]):
+            if prediction in self.num_features and not is_numeric_dtype(ref_data[prediction]):
                 raise ValueError(
-                    f"Target mentioned in num_features but doesn't have numeric dtype"
+                    f"Prediction mentioned in num_features but doesn't have numeric dtype"
                 )
 
-            if target not in self.num_features and target not in self.cat_features:
-                target_type = "num" if is_numeric_dtype(ref_data[target]) else "cat"
-                if target_type == "num" and target not in self.num_features:
-                    self.num_features.append(target)
-                elif target_type == "cat" and target not in self.cat_features:
-                    self.cat_features.append(target)
+            if prediction not in self.num_features and prediction not in self.cat_features:
+                prediction_type = "num" if is_numeric_dtype(ref_data[prediction]) else "cat"
+                if prediction_type == "num" and prediction not in self.num_features:
+                    self.num_features.append(prediction)
+                elif prediction_type == "cat" and prediction not in self.cat_features:
+                    self.cat_features.append(prediction)
 
         self.ref_data = ref_data[
             num_features + cat_features
-        ]  # target уже в одной из них
+        ]  # prediction уже в одной из них
 
     def profile_ref_data(self):
 
         cat_ref = {}
         num_ref = {}
 
-        target_ref = {}
+        prediction_ref = {}
 
         for col in self.cat_features:
             cat_result = self._profile_cat_feature(col)
-            if col != self.target:
+            if col != self.prediction:
                 cat_ref[col] = cat_result
             else:
-                target_ref["type"] = "cat"
-                target_ref[col] = cat_result
-                target_ref["raw"] = self.ref_data[col]
+                prediction_ref["type"] = "cat"
+                prediction_ref[col] = cat_result
+                prediction_ref["raw"] = self.ref_data[col]
 
         for col in self.num_features:
             thresh = self.low_cardinality_threshold
@@ -272,17 +272,17 @@ class Profiler:
                 num_result = self._profile_num_feature(col)
                 num_result["low_cardinality"] = False
 
-            if col != self.target:
+            if col != self.prediction:
                 num_ref[col] = num_result
             else:
-                target_ref["type"] = "num"
-                target_ref[col] = num_result
-                target_ref["raw"] = ref_data[col]
+                prediction_ref["type"] = "num"
+                prediction_ref[col] = num_result
+                prediction_ref["raw"] = ref_data[col]
 
-        if target_ref and (target_ref[self.target]["missing_rate"] > 0):
-            missing_rate = target_ref[self.target]["missing_rate"]
+        if prediction_ref and (prediction_ref[self.prediction]["missing_rate"] > 0):
+            missing_rate = prediction_ref[self.prediction]["missing_rate"]
             warnings.warn(
-                f"Missing values in target. Missing rate: {missing_rate}", UserWarning
+                f"Missing values in prediction. Missing rate: {missing_rate}", UserWarning
             )
 
         if self.take_sample:
@@ -293,7 +293,7 @@ class Profiler:
         else:
             sample = self.ref_data
 
-        return cat_ref, num_ref, sample, target_ref
+        return cat_ref, num_ref, sample, prediction_ref
 
     @staticmethod
     def build_reference_sample(
