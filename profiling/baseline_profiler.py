@@ -349,14 +349,14 @@ class Profiler:
         frequencies: dict[Hashable, int] = counts.to_dict()
 
         cats_to_merge = counts[counts < thresh].index.to_list()
-        merge_proportion = (counts[counts < thresh] / n_without_missing).sum()
+        merge_cats_sum = counts[counts < thresh].sum()
 
         merge_info = {
             "merge_threshold": thresh,
             "other_bucket": {
                 "categories": cats_to_merge,
                 "is_catch_all_for_unseen": True,
-                "proportion": merge_proportion,
+                "merge_cats_sum": int(merge_cats_sum),
             },
         }
 
