@@ -696,6 +696,7 @@ dependencies = [
     { name = "confluent-kafka" },
     { name = "pandas" },
     { name = "prometheus-client" },
+    { name = "pyarrow" },
 ]
 
 [package.dev-dependencies]
@@ -716,6 +717,7 @@ requires-dist = [
     { name = "confluent-kafka", specifier = ">=2.15.0" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "prometheus-client", specifier = ">=0.26.0" },
+    { name = "pyarrow", specifier = ">=25.0.1" },
 ]
 
 [package.metadata.requires-dev]
