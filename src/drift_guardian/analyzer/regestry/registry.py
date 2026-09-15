@@ -1,5 +1,5 @@
 from config.parse_config import Metric
-from schema import MetricFn
+from src.analyzer.schema.schema import MetricFn
 
 METRIC_REGISTRY: dict[Metric, MetricFn] = {}
 
