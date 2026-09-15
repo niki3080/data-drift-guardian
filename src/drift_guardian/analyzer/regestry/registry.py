@@ -1,5 +1,5 @@
 from config.parse_config import Metric
-from src.analyzer.schema.schema import MetricFn
+from src.drift_guardian.analyzer.schema.schema import MetricFn
 
 METRIC_REGISTRY: dict[Metric, MetricFn] = {}
 
