@@ -26,9 +26,9 @@ def js_divergence(ref_counts, actual_counts, base=2):
     js_distance = distance.jensenshannon(ref_counts, actual_counts, base=base)
     return js_distance ** 2
 
-# def quantile_drift(quantile_actual, quantile_ref, ref_std):
-#     drift = (quantile_actual - quantile_ref) / ref_std
-#     return max(drift), drift
+def quantile_drift(quantile_actual, quantile_ref, ref_std):
+    drift = (quantile_actual - quantile_ref) / ref_std
+    return max(drift)
 
 #реализовано
 def ks_d_statistic(raw_ref, raw_actual):
