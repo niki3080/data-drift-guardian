@@ -1,16 +1,16 @@
-from enum import Enum
 from typing import Dict, List, ClassVar, Optional
+from enum import StrEnum
 
 from pydantic import BaseModel, Field, model_validator
 import yaml
 
 
-class FeatureType(str, Enum):
+class FeatureType(StrEnum):
     numeric = "numeric"
     categorical = "categorical"
 
 
-class Metric(str, Enum):
+class Metric(StrEnum):
     missing_rate = "missing_rate"
     psi = "psi"
     unseen_category_rate = "unseen_category_rate"
@@ -49,9 +49,7 @@ class TypedMetricsConfig(BaseModel):
 
     NUMERIC_ONLY_METRICS: ClassVar[set[Metric]] = {
         Metric.wasserstein_distance,
-        Metric.quantile_drift,
         Metric.kstest,
-        Metric.mean_zscore,
     }
     CATEGORICAL_ONLY_METRICS: ClassVar[set[Metric]] = {
         Metric.unseen_category_rate,
@@ -114,5 +112,5 @@ def read_config(path):
     return config
 
 
-example_config = read_config(r"F:\s21_proj\data-drift-guardian\config\config.yaml")
-print(example_config)
+# example_config = read_config(r"F:\s21_proj\data-drift-guardian\config\config.yaml")
+# print(example_config)
