@@ -258,7 +258,6 @@ class Profiler:
             else:
                 prediction_ref["type"] = "cat"
                 prediction_ref[col] = cat_result
-                prediction_ref["raw"] = self.ref_data[col]
 
         for col in self.num_features:
             thresh = self.low_cardinality_threshold
@@ -277,7 +276,6 @@ class Profiler:
             else:
                 prediction_ref["type"] = "num"
                 prediction_ref[col] = num_result
-                prediction_ref["raw"] = ref_data[col]
 
         if prediction_ref and (prediction_ref[self.prediction]["missing_rate"] > 0):
             missing_rate = prediction_ref[self.prediction]["missing_rate"]
@@ -417,7 +415,6 @@ class Profiler:
         deciles = column.quantile(bounds_for_deciles).to_list()
         deciles[0], deciles[-1] = -np.inf, np.inf
         frequencies, _ = np.histogram(column.dropna(), deciles)
-        proportions_in_bins = frequencies / n_without_missing
 
         result = {
             "type": "numeric",
@@ -431,7 +428,7 @@ class Profiler:
             "decile_bins": {
                 "edges": deciles,
                 "frequencies": frequencies,
-                "proportions": proportions_in_bins,
+                "deciles": deciles,
             },
         }
 
