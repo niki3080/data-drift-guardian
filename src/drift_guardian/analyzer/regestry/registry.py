@@ -1,6 +1,7 @@
 from config.parse_config import Metric
 from src.drift_guardian.analyzer.schema.schema import MetricFn
 
+
 METRIC_REGISTRY: dict[Metric, MetricFn] = {}
 
 
@@ -10,4 +11,12 @@ def register(metric: Metric):
         return fn
     return wrapper
 
-
+from src.drift_guardian.analyzer.methods import (category_churn,
+                                                 chi2,
+                                                 cramer_v,
+                                                 js_divergence,
+                                                 ks_d_statistic,
+                                                 missing_rate,
+                                                 psi,
+                                                 unseen_category_rate,
+                                                 wn_distance) # noqa: F401 — импорт ради побочного эффекта регистрации
