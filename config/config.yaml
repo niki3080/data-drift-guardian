@@ -24,10 +24,9 @@ features:
 prediction_metrics:
   enabled: true
   score_column: prediction_score
-  threshold: 0.5
+  type: numeric
   metrics:
-    - prediction_score_drift
-    - positive_prediction_rate
+    - psi
 
 thresholds:
   psi:

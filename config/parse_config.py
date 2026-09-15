@@ -1,13 +1,11 @@
 from enum import Enum
-from typing import Dict, List, ClassVar
+from typing import Dict, List, ClassVar, Optional
 
 from pydantic import BaseModel, Field, model_validator
 import yaml
 
 
 class FeatureType(str, Enum):
-    """Допустимые типы фичей."""
-
     numeric = "numeric"
     categorical = "categorical"
 
@@ -15,17 +13,15 @@ class FeatureType(str, Enum):
 class Metric(str, Enum):
     missing_rate = "missing_rate"
     psi = "psi"
-    mean_zscore = "mean_zscore"
-    cramer_v_score = "cramer_v_score"
     unseen_category_rate = "unseen_category_rate"
     cardinality_ratio = "cardinality_ratio"
-
-
-class PredictionMetric(str, Enum):
-    """Метрики для предсказаний."""
-
-    prediction_score_drift = "prediction_score_drift"
-    positive_prediction_rate = "positive_prediction_rate"
+    js_divergence = "js_divergence"
+    wasserstein_distance = "wasserstein_distance"
+    quantile_drift = "quantile_drift"
+    chi2 = "chi2"
+    cramer_v = "cramer_v"
+    category_churn = "category_churn"
+    kstest = "kstest"
 
 
 class ThresholdPair(BaseModel):
@@ -42,15 +38,34 @@ class ThresholdPair(BaseModel):
         return self
 
 
-class FeatureConfig(BaseModel):
+class TypedMetricsConfig(BaseModel):
+    """
+    Базовый класс для конфигов, где набор допустимых метрик
+    зависит от типа фичи (numeric / categorical).
+    """
+
     type: FeatureType
     metrics: List[Metric] = Field(..., min_length=1)
 
-    NUMERIC_ONLY_METRICS: ClassVar[set[Metric]] = {Metric.mean_zscore}
-    CATEGORICAL_ONLY_METRICS: ClassVar[set[Metric]] = {Metric.cramer_v_score}
+    NUMERIC_ONLY_METRICS: ClassVar[set[Metric]] = {
+        Metric.wasserstein_distance,
+        Metric.quantile_drift,
+        Metric.kstest,
+        Metric.mean_zscore,
+    }
+    CATEGORICAL_ONLY_METRICS: ClassVar[set[Metric]] = {
+        Metric.unseen_category_rate,
+        Metric.cardinality_ratio,
+        Metric.chi2,
+        Metric.cramer_v,
+        Metric.category_churn,
+    }
 
     @model_validator(mode="after")
     def check_metrics_for_type(self):
+        if self.type is None or not self.metrics:
+            return self
+
         if self.type == FeatureType.categorical and (
             wrong := set(self.metrics) & self.NUMERIC_ONLY_METRICS
         ):
@@ -66,39 +81,24 @@ class FeatureConfig(BaseModel):
         return self
 
 
-class PredictionMetricsConfig(BaseModel):
+class FeatureConfig(TypedMetricsConfig):
+    """Конфиг метрик для обычной фичи."""
+    pass
+
+
+class PredictionMetricsConfig(TypedMetricsConfig):
+    """
+    Конфиг метрик для предсказаний.
+    """
+
     enabled: bool = True
-    score_column: str
-    threshold: float = Field(..., ge=0.0, le=1.0)
-    metrics: List[PredictionMetric] = Field(..., min_length=1)
+    score_column: Optional[str] = None
 
-
-# class Thresholds(BaseModel):
-#     psi_warning: float = Field(..., ge=0.0)
-#     psi_critical: float = Field(..., ge=0.0)
-#     zscore_warning: float = Field(..., ge=0.0)
-#     zscore_critical: float = Field(..., ge=0.0)
-#     unseen_category_rate_warning: float = Field(..., ge=0.0, le=1.0)
-#     unseen_category_rate_critical: float = Field(..., ge=0.0, le=1.0)
-
-#     @model_validator(mode="after")
-#     def warning_below_critical(self):
-#         pairs = [
-#             ("psi", self.psi_warning, self.psi_critical),
-#             ("zscore", self.zscore_warning, self.zscore_critical),
-#             (
-#                 "unseen_category_rate",
-#                 self.unseen_category_rate_warning,
-#                 self.unseen_category_rate_critical,
-#             ),
-#         ]
-#         for name, warn, crit in pairs:
-#             if warn >= crit:
-#                 raise ValueError(
-#                     f"{name}_warning ({warn}) должен быть меньше "
-#                     f"{name}_critical ({crit})"
-#                 )
-#         return self
+    @model_validator(mode="after")
+    def check_required_when_enabled(self):
+        if self.enabled and self.score_column is None:
+            raise ValueError("При enabled=True обязателен score_column")
+        return self
 
 
 class Config(BaseModel):
