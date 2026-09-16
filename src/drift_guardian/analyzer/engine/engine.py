@@ -1,3 +1,5 @@
+import warnings
+
 from src.drift_guardian.analyzer.regestry.registry import METRIC_REGISTRY
 from src.drift_guardian.analyzer.schema.schema import ReferenceDict, MetricFn
 from config.parse_config import Metric
@@ -20,36 +22,43 @@ class DriftMetricsEngine:
         config = self.config
         reference_dict = self.reference_dict
 
-        results = {}
+        feature_results = {}
 
         for feature in config.features:
-            feature_result = {}
+            feature_result = self._analyze_column(reference_dict, current[feature], config)
+            feature_results[feature] = feature_result
 
-            reference = find_ref(reference_dict, feature)
+        prediction_result = None
+        if config.prediction_metrics.enabled:
+            prediction_column = config.prediction_metrics.score_column
+            prediction_result = self._analyze_column(reference_dict, current[prediction_column], config, 'prediction')
 
-            feature_result['type'] = reference[feature]['type']
+        return self._make_report(feature_results, prediction_result)
 
-            for metric in config.features[feature].metrics:
-                metrics_result = {}
+    def _analyze_column(self, reference_dict: ReferenceDict, column_current: pd.Series, config, column_type='feature'):
+            column_name = column_current.name
+            assert isinstance(column_name, str)
 
+            column_result = {}
+            reference = find_ref(reference_dict, column_name)
+
+            column_result['type'] = reference['type']
+            metrics_result = {}
+
+            if column_type == 'feature':
+                metrics = config.features[column_name].metrics
+            elif column_type == 'prediction':
+                metrics = config.prediction_metrics.metrics
+            else:
+                raise ValueError(f"column_type must be feature or prediction, got {column_type}")
+
+            for metric in metrics:
                 fn: MetricFn = METRIC_REGISTRY[metric]
-                value: float = fn(reference_dict, current[feature]) #значение метрики
+                value: float = fn(reference_dict, column_current) #значение метрики
                 thresh_warning = config.thresholds[metric].warning
                 thresh_critical = config.thresholds[metric].critical
 
-                lower_is_better = thresh_warning < thresh_critical
-                metric_status = "ok"
-
-                if lower_is_better:
-                    if  thresh_critical > value > thresh_warning:
-                        metric_status = "warning"
-                    elif value > thresh_critical:
-                        metric_status = "critical"
-                else:
-                    if thresh_critical < value < thresh_warning:
-                        metric_status = "warning"
-                    elif value < thresh_critical:
-                        metric_status = "critical"
+                metric_status  = self._get_metric_status(thresh_warning, thresh_critical, value)
 
                 metrics_result[metric.value] = {
                     "value": value,
@@ -59,20 +68,35 @@ class DriftMetricsEngine:
                 }
             feature_status = self._get_feature_status(metrics_result)
 
-            feature_result['status'] = feature_status
-            feature_result['metrics'] = metrics_result
+            column_result['status'] = feature_status
+            column_result['metrics'] = metrics_result
 
-            results[feature] = feature_result
+            return column_result
 
+    @staticmethod
+    def _get_metric_status(thresh_warning, thresh_critical, metric_value):
+        lower_is_better = thresh_warning < thresh_critical
+        metric_status = "ok"
 
-        return self._make_report(results)
+        if lower_is_better:
+            if  thresh_critical > metric_value > thresh_warning:
+                metric_status = "warning"
+            elif metric_value > thresh_critical:
+                metric_status = "critical"
+        else:
+            if thresh_critical < metric_value < thresh_warning:
+                metric_status = "warning"
+            elif metric_value < thresh_critical:
+                metric_status = "critical"
+
+        return metric_status
 
     @staticmethod
     def _get_feature_status(metrics_result: dict):
         feature_status = "ok"
 
         for metric in metrics_result.keys():
-            metric_status = metric['status']
+            metric_status = metrics_result[metric]['status']
             if metric_status == 'critical' and metric != Metric.chi2:
                 feature_status = 'critical'
                 break
@@ -81,13 +105,23 @@ class DriftMetricsEngine:
 
         return feature_status
 
-    def _make_report(self, monitoring_results: dict):
-        overall_status, active_alerts = self._get_overall_status(monitoring_results)
+    def _make_report(self, monitoring_features_results: dict, monitoring_prediction_result: dict):
+        overall_status, active_alerts = self._get_overall_status(monitoring_features_results)
 
-        report = {'timestamp': self._get_current_timestamp(),
-                  'window_size': self.window_size,
-                  'overall_status': overall_status,
-                  'features': monitoring_results}
+        if monitoring_prediction_result is not None:
+            report = {'timestamp': self._get_current_timestamp(),
+                      'window_size': self.window_size,
+                      'overall_status': overall_status,
+                      'active_alerts' : active_alerts,
+                      'features': monitoring_features_results,
+                      'prediction': monitoring_prediction_result}
+        else:
+            report = {'timestamp': self._get_current_timestamp(),
+                      'window_size': self.window_size,
+                      'overall_status': overall_status,
+                      'active_alerts': active_alerts,
+                      'features': monitoring_features_results}
+
         return report
 
     @staticmethod
@@ -96,7 +130,7 @@ class DriftMetricsEngine:
         active_alerts = 0
 
         for feature in monitoring_results.keys():
-            feature_status = feature['status']
+            feature_status = monitoring_results[feature]['status']
 
             if feature_status == 'critical':
                 overall_status = 'critical'
