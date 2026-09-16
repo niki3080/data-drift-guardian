@@ -42,10 +42,16 @@ class TypedMetricsConfig(BaseModel):
     """
     Базовый класс для конфигов, где набор допустимых метрик
     зависит от типа фичи (numeric / categorical).
+
+    Поля type/metrics здесь опциональны, так как в некоторых
+    наследниках (например PredictionMetricsConfig) они нужны
+    только при определённых условиях (enabled=True).
+    Наследники, которым эти поля нужны всегда (FeatureConfig),
+    переобъявляют их как обязательные.
     """
 
-    type: FeatureType
-    metrics: List[Metric] = Field(..., min_length=1)
+    type: Optional[FeatureType] = None
+    metrics: List[Metric] = Field(default_factory=list)
 
     NUMERIC_ONLY_METRICS: ClassVar[set[Metric]] = {
         Metric.wasserstein_distance,
@@ -80,13 +86,21 @@ class TypedMetricsConfig(BaseModel):
 
 
 class FeatureConfig(TypedMetricsConfig):
-    """Конфиг метрик для обычной фичи."""
-    pass
+    """
+    Конфиг метрик для обычной фичи.
+    Здесь type и metrics обязательны всегда.
+    """
+
+    type: FeatureType
+    metrics: List[Metric] = Field(..., min_length=1)
 
 
 class PredictionMetricsConfig(TypedMetricsConfig):
     """
     Конфиг метрик для предсказаний.
+
+    type / metrics / score_column обязательны только когда enabled=True.
+    При enabled=False достаточно указать только enabled: false.
     """
 
     enabled: bool = True
@@ -94,8 +108,21 @@ class PredictionMetricsConfig(TypedMetricsConfig):
 
     @model_validator(mode="after")
     def check_required_when_enabled(self):
-        if self.enabled and self.score_column is None:
-            raise ValueError("При enabled=True обязателен score_column")
+        if not self.enabled:
+            return self
+
+        missing = []
+        if self.type is None:
+            missing.append("type")
+        if not self.metrics:
+            missing.append("metrics")
+        if self.score_column is None:
+            missing.append("score_column")
+
+        if missing:
+            raise ValueError(
+                f"При enabled=True обязательны поля: {', '.join(missing)}"
+            )
         return self
 
 
@@ -110,6 +137,7 @@ def read_config(path):
         raw = yaml.safe_load(f)
     config = Config(**raw)
     return config
+
 
 
 # example_config = read_config(r"F:\s21_proj\data-drift-guardian\config\config.yaml")
