@@ -5,7 +5,7 @@ import numpy as np
 
 
 def make_counts(reference: CategoricalRef | NumericRef, current: pd.Series):
-    if reference['type'] == 'categorical':
+    if reference['type'] == 'categorical' or reference['low_cardinality']:
         ref_buckets = reference['categories'].copy()
 
         other_bucket_cats = set(
