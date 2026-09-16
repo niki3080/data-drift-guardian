@@ -1,3 +1,5 @@
+from src.drift_guardian.analyzer.schema.schema import ReferenceDict, NumericRef
+
 import warnings
 from typing import Hashable
 
@@ -244,7 +246,7 @@ class Profiler:
             num_features + cat_features
         ]  # prediction уже в одной из них
 
-    def profile_ref_data(self):
+    def profile_ref_data(self) -> ReferenceDict:
 
         cat_ref = {}
         num_ref = {}
@@ -291,7 +293,14 @@ class Profiler:
         else:
             sample = self.ref_data
 
-        return cat_ref, num_ref, sample, prediction_ref
+        result = {
+            'cat_ref': cat_ref,
+            'num_ref': num_ref,
+            'sample': sample,
+            'preds_ref': prediction_ref
+        }
+
+        return result
 
     @staticmethod
     def build_reference_sample(
