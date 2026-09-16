@@ -5,8 +5,8 @@
     "name": "ad42z5g",
     "namespace": "default",
     "uid": "84d71d8d-a0b9-491c-8652-7e06ac02c7e0",
-    "resourceVersion": "1789546300747007",
-    "generation": 319,
+    "resourceVersion": "1789554183152009",
+    "generation": 321,
     "creationTimestamp": "2026-09-13T19:43:44Z",
     "labels": {
       "grafana.app/deprecatedInternalID": "544774350761984"
@@ -15,7 +15,7 @@
       "grafana.app/createdBy": "user:ffxsix44g20owe",
       "grafana.app/saved-from-ui": "Grafana v13.2.1 (56cd3e9288)",
       "grafana.app/updatedBy": "user:ffxsix44g20owe",
-      "grafana.app/updatedTimestamp": "2026-09-16T08:11:40Z"
+      "grafana.app/updatedTimestamp": "2026-09-16T10:23:03Z"
     }
   },
   "spec": {
@@ -3287,7 +3287,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(drift_status >= bool 1)\nor vector(-1)",
+                        "expr": "drift_active_alerts\nor vector(-1)",
                         "format": "time_series",
                         "instant": true,
                         "legendFormat": "active counter",
@@ -3309,7 +3309,7 @@
             "version": "13.2.1",
             "spec": {
               "options": {
-                "inlineEditing": false,
+                "inlineEditing": true,
                 "panZoom": false,
                 "root": {
                   "background": {
@@ -7749,7 +7749,7 @@
             "version": "13.2.1",
             "spec": {
               "options": {
-                "inlineEditing": false,
+                "inlineEditing": true,
                 "panZoom": false,
                 "root": {
                   "background": {
