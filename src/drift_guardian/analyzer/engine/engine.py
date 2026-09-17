@@ -45,18 +45,22 @@ class DriftMetricsEngine:
             column_result['type'] = reference['type']
             metrics_result = {}
 
+
             if column_type == 'feature':
                 metrics = config.features[column_name].metrics
+                resolved_thresholds = config.features[column_name].resolved_thresholds
             elif column_type == 'prediction':
                 metrics = config.prediction_metrics.metrics
+                resolved_thresholds = config.prediction_metrics.resolved_thresholds
             else:
                 raise ValueError(f"column_type must be feature or prediction, got {column_type}")
 
             for metric in metrics:
                 fn: MetricFn = METRIC_REGISTRY[metric]
                 value: float = fn(reference_dict, column_current) #значение метрики
-                thresh_warning = config.thresholds[metric].warning
-                thresh_critical = config.thresholds[metric].critical
+                threshold_pair = resolved_thresholds[metric]
+                thresh_warning = threshold_pair.warning
+                thresh_critical = threshold_pair.critical
 
                 metric_status  = self._get_metric_status(thresh_warning, thresh_critical, value)
 

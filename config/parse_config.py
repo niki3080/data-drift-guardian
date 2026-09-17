@@ -42,16 +42,14 @@ class TypedMetricsConfig(BaseModel):
     """
     Базовый класс для конфигов, где набор допустимых метрик
     зависит от типа фичи (numeric / categorical).
-
-    Поля type/metrics здесь опциональны, так как в некоторых
-    наследниках (например PredictionMetricsConfig) они нужны
-    только при определённых условиях (enabled=True).
-    Наследники, которым эти поля нужны всегда (FeatureConfig),
-    переобъявляют их как обязательные.
     """
 
     type: Optional[FeatureType] = None
     metrics: List[Metric] = Field(default_factory=list)
+
+    thresholds: Dict[Metric, ThresholdPair] = Field(default_factory=dict)
+
+    resolved_thresholds: Dict[Metric, ThresholdPair] = Field(default_factory=dict)
 
     NUMERIC_ONLY_METRICS: ClassVar[set[Metric]] = {
         Metric.wasserstein_distance,
@@ -84,25 +82,24 @@ class TypedMetricsConfig(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def check_thresholds_are_used_metrics(self):
+        if self.metrics and self.thresholds:
+            extra = set(self.thresholds) - set(self.metrics)
+            if extra:
+                raise ValueError(
+                    f"thresholds заданы для метрик {[m.value for m in extra]}, "
+                    "которые не входят в metrics этой фичи"
+                )
+        return self
+
 
 class FeatureConfig(TypedMetricsConfig):
-    """
-    Конфиг метрик для обычной фичи.
-    Здесь type и metrics обязательны всегда.
-    """
-
     type: FeatureType
     metrics: List[Metric] = Field(..., min_length=1)
 
 
 class PredictionMetricsConfig(TypedMetricsConfig):
-    """
-    Конфиг метрик для предсказаний.
-
-    type / metrics / score_column обязательны только когда enabled=True.
-    При enabled=False достаточно указать только enabled: false.
-    """
-
     enabled: bool = True
     score_column: Optional[str] = None
 
@@ -125,11 +122,56 @@ class PredictionMetricsConfig(TypedMetricsConfig):
             )
         return self
 
+class StreamDriftConfig(BaseModel):
+    """
+    Метрики состояния стрима событий (event-time drift monitoring).
+    Каждая метрика опциональна, но если задана — обязана содержать
+    пару warning/critical (это гарантирует сам ThresholdPair).
+    """
+
+    drift_stream_status: Optional[ThresholdPair] = None
+    drift_event_time_lag_seconds: Optional[ThresholdPair] = None
+    drift_window_time_span_seconds: Optional[ThresholdPair] = None
+    drift_max_event_gap_seconds: Optional[ThresholdPair] = None
+    drift_invalid_event_time_rate: Optional[ThresholdPair] = None
+    drift_late_events_total: Optional[ThresholdPair] = None
+    drift_out_of_order_events_total: Optional[ThresholdPair] = None
 
 class Config(BaseModel):
     features: Dict[str, FeatureConfig]
     prediction_metrics: PredictionMetricsConfig
-    thresholds: Dict[Metric, ThresholdPair]
+    stream_drift: Optional[StreamDriftConfig] = None
+
+    # глобальные дефолтные трешхолды "по метрике" (fallback, если у фичи нет override)
+    thresholds: Dict[Metric, ThresholdPair] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def resolve_feature_thresholds(self):
+        def resolve(block: TypedMetricsConfig, label: str):
+            merged: Dict[Metric, ThresholdPair] = {}
+            missing: List[str] = []
+            for metric in block.metrics:
+                if metric in block.thresholds:
+                    merged[metric] = block.thresholds[metric]
+                elif metric in self.thresholds:
+                    merged[metric] = self.thresholds[metric]
+                else:
+                    missing.append(metric.value)
+
+            if missing:
+                raise ValueError(
+                    f"Для {label} не заданы thresholds для метрик {missing} "
+                    "(ни глобально в Config.thresholds, ни локально в самой фиче)"
+                )
+            block.resolved_thresholds = merged
+
+        for name, feature in self.features.items():
+            resolve(feature, f"feature '{name}'")
+
+        if self.prediction_metrics.enabled:
+            resolve(self.prediction_metrics, "prediction_metrics")
+
+        return self
 
 
 def read_config(path):
@@ -137,7 +179,6 @@ def read_config(path):
         raw = yaml.safe_load(f)
     config = Config(**raw)
     return config
-
 
 
 # example_config = read_config(r"F:\s21_proj\data-drift-guardian\config\config.yaml")
