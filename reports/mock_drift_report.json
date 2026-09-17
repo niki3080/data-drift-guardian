@@ -1,59 +1,61 @@
 {
-  "_comment": "Mock report. The metadata values must be supplied by DriftMetricsEngine.",
+  "_comment": "Temporary integration fixture used until the real drift engine is connected.",
   "metadata": {
-    "_comment": "TODO: agree on these fields and their source with the report producer.",
-    "dataset_name": "Real Estate Dataset",
-    "generated_at": "2026-09-08T12:00:00Z",
-    "reference_rows": 123000,
-    "current_rows": 58000
+    "dataset_name": "demo_reference",
+    "generated_at": "2026-09-17T00:00:00Z",
+    "reference_rows": 10000,
+    "current_rows": 1000
   },
   "overall_status": "critical",
-  "active_alerts": 3,
+  "active_alerts": 6,
   "window_size": 1000,
   "features": {
     "age": {
       "type": "numeric",
       "status": "critical",
       "metrics": {
-        "psi": 0.31,
         "missing_rate": 0.01,
-        "mean_zscore": 3.4
+        "psi": 0.31
       },
       "alerts": [
-        "psi_critical",
-        "mean_zscore_critical"
+        "psi_critical"
       ]
     },
     "income": {
       "type": "numeric",
-      "status": "passed",
+      "status": "warning",
       "metrics": {
-        "psi": 0.04,
         "missing_rate": 0.03,
-        "mean_zscore": 0.7
+        "psi": 0.04
       },
-      "alerts": []
+      "alerts": [
+        "missing_rate_warning"
+      ]
     },
     "country": {
       "type": "categorical",
       "status": "critical",
       "metrics": {
-        "psi": 0.18,
         "missing_rate": 0.0,
+        "psi": 0.18,
         "unseen_category_rate": 0.12,
         "cardinality_ratio": 1.5
       },
       "alerts": [
-        "unseen_category_rate_critical"
+        "psi_warning",
+        "unseen_category_rate_critical",
+        "cardinality_ratio_critical"
       ]
     }
   },
   "prediction": {
-    "status": "passed",
+    "type": "numeric",
+    "status": "warning",
     "metrics": {
-      "prediction_score_drift": 0.08,
-      "positive_prediction_rate": 0.41
+      "psi": 0.11
     },
-    "alerts": []
+    "alerts": [
+      "psi_warning"
+    ]
   }
 }

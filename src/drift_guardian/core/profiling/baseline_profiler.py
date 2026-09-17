@@ -32,18 +32,18 @@ class Profiler:
         if not isinstance(ref_data, pd.DataFrame):
             raise ValueError("ref_data must be provided in pandas DataFrame format")
 
-        # Normalize feature lists
+        # нормализуем списки признаков
         num_features = list(num_features) if num_features is not None else []
         cat_features = list(cat_features) if cat_features is not None else []
 
-        # Validate feature names
+        # проверяем имена признаков
         if not all(isinstance(feature, str) for feature in num_features):
             raise ValueError("All num_features must be strings")
 
         if not all(isinstance(feature, str) for feature in cat_features):
             raise ValueError("All cat_features must be strings")
 
-        # Check duplicate features
+        # проверяем дублирование признаков
         if len(num_features) != len(set(num_features)):
             duplicates = sorted(
                 {feature for feature in num_features if num_features.count(feature) > 1}
@@ -56,7 +56,7 @@ class Profiler:
             )
             raise ValueError(f"Duplicate feature(s) in cat_features: {duplicates}")
 
-        # A feature cannot be both numerical and categorical
+        # один признак не может быть одновременно числовым и категориальным
         overlap = set(num_features) & set(cat_features)
         if overlap:
             raise ValueError(
@@ -64,25 +64,25 @@ class Profiler:
                 f"{sorted(overlap)}"
             )
 
-        # Validate prediction
+        # проверяем prediction
         if not isinstance(prediction, str | None):
             raise ValueError(f"prediction must be string or None, got {type(prediction)}")
 
-        # Prediction cannot be explicitly specified in both feature groups
+        # prediction нельзя явно указывать сразу в обеих группах признаков
         if prediction is not None and prediction in num_features and prediction in cat_features:
             raise ValueError(
                 f"Prediction '{prediction}' is provided in both num_features and cat_features. "
                 "Choose one or leave prediction out of feature lists."
             )
 
-        # Validate window_size
+        # проверяем window_size
         if not isinstance(window_size, int) or isinstance(window_size, bool):
             raise ValueError(f"window_size must be int, got {type(window_size)}")
 
         if window_size <= 0:
             raise ValueError(f"window_size must be greater than 0, got {window_size}")
 
-        # Validate merge_threshold
+        # проверяем merge_threshold
         if not isinstance(merge_threshold, int) or isinstance(merge_threshold, bool):
             raise ValueError(
                 f"merge_threshold must be int, got {type(merge_threshold)}"
@@ -93,7 +93,7 @@ class Profiler:
                 f"merge_threshold must be greater than 0, got {merge_threshold}"
             )
 
-        # Validate low_cardinality_threshold
+        # проверяем low_cardinality_threshold
         if not isinstance(low_cardinality_threshold, int) or isinstance(
             low_cardinality_threshold, bool
         ):
@@ -108,11 +108,11 @@ class Profiler:
                 f"got {low_cardinality_threshold}"
             )
 
-        # Validate take_sample
+        # проверяем take_sample
         if not isinstance(take_sample, bool):
             raise ValueError(f"sample must be bool, got {type(take_sample)}")
 
-        # Validate sample dtype
+        # проверяем dtype выборки
         if not isinstance(sample_float_dtype, str):
             raise ValueError(
                 f"sample_dtype must be str, got {type(sample_float_dtype)}"
@@ -130,13 +130,13 @@ class Profiler:
                 f"sample_dtype must be a numpy floating dtype, got {sample_float_dtype}"
             )
 
-        # Validate random_state
+        # проверяем random_state
         if not isinstance(random_state, int | None) or isinstance(random_state, bool):
             raise ValueError(
                 f"random_state must be int or None, got {type(random_state)}"
             )
 
-        # At least one thing must be profiled
+        # для профилирования должен быть задан хотя бы один объект
         if not num_features and not cat_features and prediction is None:
             raise ValueError(
                 "Something from num_features, cat_features or prediction "

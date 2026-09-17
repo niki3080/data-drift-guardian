@@ -130,7 +130,7 @@ SEVERITY_TO_CODE = {
 
 
 def export_to_prometheus(report: dict[str, Any]) -> None:
-    """Map one drift_report produced by the engine to Prometheus series."""
+    """Преобразует один drift_report в набор Prometheus-метрик."""
 
     timestamp = datetime.fromisoformat(
         report["timestamp"].replace("Z", "+00:00")
@@ -179,7 +179,7 @@ def _export_feature(
 
 
 def set_critical_scenario() -> None:
-    """Populate the exporter with a small, internally consistent report."""
+    """Заполняет exporter небольшим согласованным drift-report."""
     thresholds = {
         "psi": {"warning": 0.1, "critical": 0.25},
         "missing_rate": {"warning": 0.05, "critical": 0.1},
@@ -245,15 +245,15 @@ def set_critical_scenario() -> None:
         "category_churn": 0.03,
     }
     numeric_features = {
-        # Three alerts: critical, warning, warning.
+        # три алерта: critical, warning, warning
         "age": {"psi": 0.31, "missing_rate": 0.06, "wasserstein_distance": 0.15},
-        # Two warnings.
+        # два warning-алерта
         "income": {"psi": 0.15, "kstest": 0.15},
-        # One warning and one critical.
+        # один warning-алерт и один critical-алерт
         "tenure": {"js_divergence": 0.15, "wasserstein_distance": 0.30},
-        # One critical alert.
+        # один critical-алерт
         "balance": {"missing_rate": 0.12},
-        # One warning alert.
+        # один warning-алерт
         "transactions": {"missing_rate": 0.06},
         "credit_score": {"psi": 0.05, "missing_rate": 0.01, "wasserstein_distance": 0.05},
         "account_age_days": {"psi": 0.02, "missing_rate": 0.00, "wasserstein_distance": 0.03},
@@ -262,7 +262,7 @@ def set_critical_scenario() -> None:
         "support_tickets": {"psi": 0.06, "missing_rate": 0.03, "wasserstein_distance": 0.05},
     }
     categorical_features = {
-        # One warning alert.
+        # один warning-алерт
         "country": {"unseen_category_rate": 0.06},
         "device_type": {"psi": 0.03, "missing_rate": 0.01, "unseen_category_rate": 0.01, "cramer_v": 0.04},
         "channel": {"psi": 0.04, "missing_rate": 0.01, "unseen_category_rate": 0.02, "cramer_v": 0.03},
@@ -300,8 +300,8 @@ def set_critical_scenario() -> None:
     })
 
     all_features = (*features.values(), prediction)
-    
-    # Отключить предикт
+
+    # отключить предикт
     # prediction = None
     # all_features = tuple(features.values())
 
@@ -364,7 +364,7 @@ FEATURE_LABELS = (
 
 
 def set_insufficient_data() -> None:
-    """Expose the warm-up state until the first window is analyzed."""
+    """Показывает состояние прогрева до анализа первого полного окна."""
 
     stream_status.set(-1)
     overall_status.set(-1)
@@ -380,7 +380,7 @@ def set_insufficient_data() -> None:
 
 
 def current_stream_state(seconds_since_full: float) -> int:
-    """Return the current state in a roughly 2.25-minute repeating cycle."""
+    """Возвращает состояние текущей фазы повторяющегося demo-цикла."""
 
     position = seconds_since_full % STATE_CYCLE_SECONDS
     if position < NORMAL_DURATION_SECONDS:
@@ -395,7 +395,7 @@ def update_stream_health(
     tick: int,
     rng: random.Random,
 ) -> None:
-    """Update technical stream metrics for one generated event."""
+    """Обновляет технические stream-метрики для одного demo-события."""
 
     stream_status.set(status)
 
@@ -425,7 +425,7 @@ def update_stream_health(
 
 
 def simulate_event_stream() -> None:
-    """Generate events and update stream metrics in a background thread."""
+    """Генерирует события и обновляет stream-метрики в фоновом потоке."""
 
     rng = random.Random()
     current_window_size = 0
