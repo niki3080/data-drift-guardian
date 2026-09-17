@@ -24,6 +24,11 @@ class Quantiles(TypedDict):
     p95: float
     p99: float
 
+class DecileBins(TypedDict):
+    edges: list[float]
+    frequencies: np.ndarray
+    deciles: list[float]
+
 class CategoricalRef(TypedDict):
     feature: str
     type: Literal["categorical"]
@@ -48,6 +53,7 @@ class NumericRef(TypedDict):
     quantiles: Quantiles
     low_cardinality: bool
 
+    decile_bins: NotRequired[DecileBins]
     cardinality_ratio: NotRequired[np.floating]
     categories: NotRequired[dict]
     proportions: NotRequired[dict]
