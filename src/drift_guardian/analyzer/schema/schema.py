@@ -28,6 +28,7 @@ class CategoricalRef(TypedDict):
     feature: str
     type: Literal["categorical"]
     n: np.integer
+    cardinality_ratio: np.floating
     missing_rate: np.floating
     categories: dict[str, int]
     proportions: dict[str, float]
@@ -47,6 +48,7 @@ class NumericRef(TypedDict):
     quantiles: Quantiles
     low_cardinality: bool
 
+    cardinality_ratio: NotRequired[np.floating]
     categories: NotRequired[dict]
     proportions: NotRequired[dict]
     is_complete_category_list: NotRequired[bool]

@@ -19,4 +19,5 @@ from src.drift_guardian.analyzer.methods import (category_churn,
                                                  missing_rate,
                                                  psi,
                                                  unseen_category_rate,
+                                                 cardinality_ratio,
                                                  wn_distance) # noqa: F401 — импорт ради побочного эффекта регистрации

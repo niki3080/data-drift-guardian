@@ -1,3 +1,4 @@
+import pandas as pd
 from scipy.spatial import distance
 from scipy.stats import chi2_contingency, kstest
 from scipy.stats.contingency import association
@@ -78,6 +79,12 @@ def category_churn(ref_freq: dict, actual_freq: dict) -> float:
         return 0.0
     
     return (len(new_cats) + len(disappeared_cats)) / len(all_cats)
+
+def cardinality_ratio_abs_diff(ref_cardinality_ratio: float, current: pd.Series) -> float:
+
+    cur_cardinality_ratio = current.nunique() / len(current.dropna())
+
+    return abs(cur_cardinality_ratio - ref_cardinality_ratio)
 
 
 
