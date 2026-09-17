@@ -1,4 +1,4 @@
-from src.drift_guardian.analyzer.schema.schema import ReferenceDict, NumericRef
+from src.drift_guardian.schema.models import ReferenceDict
 
 import warnings
 from typing import Hashable
@@ -343,6 +343,7 @@ class Profiler:
         thresh = self.merge_threshold
 
         missing = column.isna().sum()
+        cardinality_ratio = column.nunique() / len(column.dropna())
 
         if missing == len(column):
             raise ValueError(f"All values in column '{cat_feature}' is missing")
@@ -372,6 +373,7 @@ class Profiler:
             "type": "categorical",
             "n": n_without_missing,
             "missing_rate": missing_rate,
+            "cardinality_ratio": cardinality_ratio,
             "categories": frequencies,
             "proportions": proportions,
             "is_complete_category_list": True,
@@ -450,6 +452,7 @@ class Profiler:
         result_cat = self._profile_cat_feature(num_low_cord_feature)
 
         result_num["low_cardinality"] = True
+        result_num['cardinality_ratio'] = result_cat['cardinality_ratio']
         result_num["categories"] = result_cat["categories"]
         result_num["proportions"] = result_cat["proportions"]
         result_num["is_complete_category_list"] = result_cat[

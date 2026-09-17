@@ -1,8 +1,8 @@
 from config.parse_config import Metric
-from src.drift_guardian.analyzer.regestry.registry import register
-from src.drift_guardian.analyzer.schema.schema import ReferenceDict
-from src.drift_guardian.analyzer.utils.utils import find_ref
-from src.drift_guardian.analyzer.methods.low_level.low_level import cardinality_ratio_abs_diff
+from src.drift_guardian.analyzer.regestry.metric_registry import register
+from src.drift_guardian.schema.models import ReferenceDict
+from src.drift_guardian.analyzer.utils import find_ref
+from src.drift_guardian.analyzer.methods.low_level.stats import cardinality_ratio_abs_diff
 
 import pandas as pd
 

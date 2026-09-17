@@ -1,8 +1,8 @@
 from config.parse_config import Metric
-from src.drift_guardian.analyzer.regestry.registry import register
-from src.drift_guardian.analyzer.utils.utils import make_counts, find_ref
-from src.drift_guardian.analyzer.schema.schema import ReferenceDict
-from src.drift_guardian.analyzer.methods.low_level.low_level import js_divergence
+from src.drift_guardian.analyzer.regestry.metric_registry import register
+from src.drift_guardian.analyzer.utils import make_counts, find_ref
+from src.drift_guardian.schema.models import ReferenceDict
+from src.drift_guardian.analyzer.methods.low_level.stats import js_divergence
 
 import pandas as pd
 

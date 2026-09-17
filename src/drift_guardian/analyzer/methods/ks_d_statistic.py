@@ -1,7 +1,7 @@
 from config.parse_config import Metric
-from src.drift_guardian.analyzer.regestry.registry import register
-from src.drift_guardian.analyzer.schema.schema import ReferenceDict
-from src.drift_guardian.analyzer.methods.low_level.low_level import ks_d_statistic
+from src.drift_guardian.analyzer.regestry.metric_registry import register
+from src.drift_guardian.schema.models import ReferenceDict
+from src.drift_guardian.analyzer.methods.low_level.stats import ks_d_statistic
 
 
 import pandas as pd

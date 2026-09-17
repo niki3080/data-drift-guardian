@@ -1,4 +1,4 @@
-from src.drift_guardian.analyzer.schema.schema import CategoricalRef, NumericRef, ReferenceDict
+from src.drift_guardian.schema.models import CategoricalRef, NumericRef
 
 import pandas as pd
 import numpy as np
@@ -56,16 +56,3 @@ def make_counts(reference: CategoricalRef | NumericRef, current: pd.Series):
         raise ValueError(f"Unknown feature type in reference: {reference['type']}")
 
     return ref_counts, cur_counts
-
-
-def find_ref(reference_dict: ReferenceDict, feature: str) -> CategoricalRef | NumericRef:
-    if feature in reference_dict['num_ref']:
-        reference = reference_dict['num_ref'][feature]
-    elif feature in reference_dict['cat_ref']:
-        reference = reference_dict['cat_ref'][feature]
-    elif feature in reference_dict['preds_ref']:
-        reference = reference_dict['preds_ref'][feature]
-    else:
-        raise ValueError(f"No feature: {feature} in reference_dict")
-
-    return reference

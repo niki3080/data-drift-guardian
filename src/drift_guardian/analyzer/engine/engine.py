@@ -1,9 +1,7 @@
-import warnings
-
-from src.drift_guardian.analyzer.regestry.registry import METRIC_REGISTRY
-from src.drift_guardian.analyzer.schema.schema import ReferenceDict, MetricFn
+from src.drift_guardian.analyzer.regestry.metric_registry import METRIC_REGISTRY
+from src.drift_guardian.schema.models import ReferenceDict, MetricFn
 from config.parse_config import Metric
-from src.drift_guardian.analyzer.utils.utils import find_ref
+from src.drift_guardian.analyzer.utils import find_ref
 
 from datetime import datetime, timezone
 

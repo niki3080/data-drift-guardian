@@ -80,6 +80,7 @@ def category_churn(ref_freq: dict, actual_freq: dict) -> float:
     
     return (len(new_cats) + len(disappeared_cats)) / len(all_cats)
 
+#реализовано
 def cardinality_ratio_abs_diff(ref_cardinality_ratio: float, current: pd.Series) -> float:
 
     cur_cardinality_ratio = current.nunique() / len(current.dropna())

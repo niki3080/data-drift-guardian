@@ -57,10 +57,11 @@ class NumericRef(TypedDict):
 
 CatRef = dict[str, CategoricalRef]
 PredsRef = dict[str, NumericRef | CategoricalRef]
+NumRef = dict[str, NumericRef]
 
 class ReferenceDict(TypedDict):
     cat_ref: CatRef
-    num_ref: NumericRef
+    num_ref: NumRef
     sample: pd.DataFrame
     preds_ref: PredsRef
 
