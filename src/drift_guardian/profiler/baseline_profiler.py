@@ -437,7 +437,6 @@ class Profiler:
             "min": column_min,
             "quantiles": values_for_quantile_drift,
             "decile_bins": {
-                "edges": deciles,
                 "frequencies": frequencies,
                 "deciles": deciles,
             },
