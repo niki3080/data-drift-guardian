@@ -25,7 +25,6 @@ class Quantiles(TypedDict):
     p99: float
 
 class DecileBins(TypedDict):
-    edges: list[float]
     frequencies: np.ndarray
     deciles: list[float]
 
