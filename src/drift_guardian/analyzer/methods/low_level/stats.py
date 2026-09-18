@@ -27,9 +27,9 @@ def js_divergence(ref_counts, actual_counts, base=2):
     js_distance = distance.jensenshannon(ref_counts, actual_counts, base=base)
     return js_distance ** 2
 
-def quantile_drift(quantile_actual, quantile_ref, ref_std):
-    drift = (quantile_actual - quantile_ref) / ref_std
-    return max(drift)
+# def quantile_drift(quantile_actual, quantile_ref, ref_std):
+#     drift = (quantile_actual - quantile_ref) / ref_std
+#     return max(drift)
 
 #реализовано
 def ks_d_statistic(raw_ref, raw_actual):
@@ -82,6 +82,8 @@ def category_churn(ref_freq: dict, actual_freq: dict) -> float:
 
 #реализовано
 def cardinality_ratio_abs_diff(ref_cardinality_ratio: float, current: pd.Series) -> float:
+    if len(current.dropna()) == 0:
+        return 0
 
     cur_cardinality_ratio = current.nunique() / len(current.dropna())
 
