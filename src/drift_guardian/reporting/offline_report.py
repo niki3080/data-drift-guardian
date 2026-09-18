@@ -1,4 +1,4 @@
-"""Generate a self-contained offline HTML report from a drift report JSON file."""
+"""Генерирует автономный HTML-отчёт из JSON drift-report."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ DEFAULT_CSS_PATH = Path(__file__).with_name("styles") / "report.css"
 
 
 def _display(value: Any) -> str:
-    """Format and escape a value for safe HTML output."""
+    """Форматирует и экранирует значение для безопасного HTML-вывода."""
     if value is None:
         return "Not specified"
     if isinstance(value, float):
@@ -22,7 +22,7 @@ def _display(value: Any) -> str:
 
 
 def _status(value: Any) -> str:
-    """Return a supported status, falling back to an unknown state."""
+    """Возвращает поддерживаемый status или unknown для неизвестного значения."""
     status = str(value or "unknown").lower()
     return status if status in {"passed", "warning", "critical"} else "unknown"
 
@@ -72,7 +72,7 @@ def _feature_rows(features: Mapping[str, Mapping[str, Any]]) -> str:
 
 
 def render_report_html(report: Mapping[str, Any], css: str) -> str:
-    """Render a drift report mapping as a complete HTML document."""
+    """Формирует полный HTML-документ из drift-report."""
     metadata = report.get("metadata", {})
     features = report.get("features", {})
     prediction = report.get("prediction", {})
@@ -185,7 +185,7 @@ def display_html_report(
     width: str = "100%",
     height: int = 900,
 ) -> None:
-    """Display a generated HTML report in an isolated Jupyter iframe."""
+    """Показывает сгенерированный HTML-отчёт в изолированном Jupyter iframe."""
     from IPython.display import HTML, display
 
     report_html = Path(report_path).read_text(encoding="utf-8")

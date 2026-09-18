@@ -1,31 +1,27 @@
-from enum import Enum
-from typing import Dict, List, ClassVar
+from typing import Dict, List, ClassVar, Optional
+from enum import StrEnum
 
 from pydantic import BaseModel, Field, model_validator
 import yaml
 
 
-class FeatureType(str, Enum):
-    """Допустимые типы фичей."""
-
+class FeatureType(StrEnum):
     numeric = "numeric"
     categorical = "categorical"
 
 
-class Metric(str, Enum):
+class Metric(StrEnum):
     missing_rate = "missing_rate"
     psi = "psi"
-    mean_zscore = "mean_zscore"
-    cramer_v_score = "cramer_v_score"
     unseen_category_rate = "unseen_category_rate"
     cardinality_ratio = "cardinality_ratio"
-
-
-class PredictionMetric(str, Enum):
-    """Метрики для предсказаний."""
-
-    prediction_score_drift = "prediction_score_drift"
-    positive_prediction_rate = "positive_prediction_rate"
+    js_divergence = "js_divergence"
+    wasserstein_distance = "wasserstein_distance"
+    quantile_drift = "quantile_drift"
+    chi2 = "chi2"
+    cramer_v = "cramer_v"
+    category_churn = "category_churn"
+    kstest = "kstest"
 
 
 class ThresholdPair(BaseModel):
@@ -42,15 +38,36 @@ class ThresholdPair(BaseModel):
         return self
 
 
-class FeatureConfig(BaseModel):
-    type: FeatureType
-    metrics: List[Metric] = Field(..., min_length=1)
+class TypedMetricsConfig(BaseModel):
+    """
+    Базовый класс для конфигов, где набор допустимых метрик
+    зависит от типа фичи (numeric / categorical).
+    """
 
-    NUMERIC_ONLY_METRICS: ClassVar[set[Metric]] = {Metric.mean_zscore}
-    CATEGORICAL_ONLY_METRICS: ClassVar[set[Metric]] = {Metric.cramer_v_score}
+    type: Optional[FeatureType] = None
+    metrics: List[Metric] = Field(default_factory=list)
+
+    thresholds: Dict[Metric, ThresholdPair] = Field(default_factory=dict)
+
+    resolved_thresholds: Dict[Metric, ThresholdPair] = Field(default_factory=dict)
+
+    NUMERIC_ONLY_METRICS: ClassVar[set[Metric]] = {
+        Metric.wasserstein_distance,
+        Metric.kstest,
+    }
+    CATEGORICAL_ONLY_METRICS: ClassVar[set[Metric]] = {
+        Metric.unseen_category_rate,
+        Metric.cardinality_ratio,
+        Metric.chi2,
+        Metric.cramer_v,
+        Metric.category_churn,
+    }
 
     @model_validator(mode="after")
     def check_metrics_for_type(self):
+        if self.type is None or not self.metrics:
+            return self
+
         if self.type == FeatureType.categorical and (
             wrong := set(self.metrics) & self.NUMERIC_ONLY_METRICS
         ):
@@ -65,46 +82,96 @@ class FeatureConfig(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def check_thresholds_are_used_metrics(self):
+        if self.metrics and self.thresholds:
+            extra = set(self.thresholds) - set(self.metrics)
+            if extra:
+                raise ValueError(
+                    f"thresholds заданы для метрик {[m.value for m in extra]}, "
+                    "которые не входят в metrics этой фичи"
+                )
+        return self
 
-class PredictionMetricsConfig(BaseModel):
+
+class FeatureConfig(TypedMetricsConfig):
+    type: FeatureType
+    metrics: List[Metric] = Field(..., min_length=1)
+
+
+class PredictionMetricsConfig(TypedMetricsConfig):
     enabled: bool = True
-    score_column: str
-    threshold: float = Field(..., ge=0.0, le=1.0)
-    metrics: List[PredictionMetric] = Field(..., min_length=1)
+    score_column: Optional[str] = None
 
+    @model_validator(mode="after")
+    def check_required_when_enabled(self):
+        if not self.enabled:
+            return self
 
-# class Thresholds(BaseModel):
-#     psi_warning: float = Field(..., ge=0.0)
-#     psi_critical: float = Field(..., ge=0.0)
-#     zscore_warning: float = Field(..., ge=0.0)
-#     zscore_critical: float = Field(..., ge=0.0)
-#     unseen_category_rate_warning: float = Field(..., ge=0.0, le=1.0)
-#     unseen_category_rate_critical: float = Field(..., ge=0.0, le=1.0)
+        missing = []
+        if self.type is None:
+            missing.append("type")
+        if not self.metrics:
+            missing.append("metrics")
+        if self.score_column is None:
+            missing.append("score_column")
 
-#     @model_validator(mode="after")
-#     def warning_below_critical(self):
-#         pairs = [
-#             ("psi", self.psi_warning, self.psi_critical),
-#             ("zscore", self.zscore_warning, self.zscore_critical),
-#             (
-#                 "unseen_category_rate",
-#                 self.unseen_category_rate_warning,
-#                 self.unseen_category_rate_critical,
-#             ),
-#         ]
-#         for name, warn, crit in pairs:
-#             if warn >= crit:
-#                 raise ValueError(
-#                     f"{name}_warning ({warn}) должен быть меньше "
-#                     f"{name}_critical ({crit})"
-#                 )
-#         return self
+        if missing:
+            raise ValueError(
+                f"При enabled=True обязательны поля: {', '.join(missing)}"
+            )
+        return self
 
+class StreamDriftConfig(BaseModel):
+    """
+    Метрики состояния стрима событий (event-time drift monitoring).
+    Каждая метрика опциональна, но если задана — обязана содержать
+    пару warning/critical (это гарантирует сам ThresholdPair).
+    """
+
+    drift_stream_status: Optional[ThresholdPair] = None
+    drift_event_time_lag_seconds: Optional[ThresholdPair] = None
+    drift_window_time_span_seconds: Optional[ThresholdPair] = None
+    drift_max_event_gap_seconds: Optional[ThresholdPair] = None
+    drift_invalid_event_time_rate: Optional[ThresholdPair] = None
+    drift_late_events_total: Optional[ThresholdPair] = None
+    drift_out_of_order_events_total: Optional[ThresholdPair] = None
 
 class Config(BaseModel):
     features: Dict[str, FeatureConfig]
     prediction_metrics: PredictionMetricsConfig
-    thresholds: Dict[Metric, ThresholdPair]
+    stream_drift: Optional[StreamDriftConfig] = None
+
+    # глобальные дефолтные трешхолды "по метрике" (fallback, если у фичи нет override)
+    thresholds: Dict[Metric, ThresholdPair] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def resolve_feature_thresholds(self):
+        def resolve(block: TypedMetricsConfig, label: str):
+            merged: Dict[Metric, ThresholdPair] = {}
+            missing: List[str] = []
+            for metric in block.metrics:
+                if metric in block.thresholds:
+                    merged[metric] = block.thresholds[metric]
+                elif metric in self.thresholds:
+                    merged[metric] = self.thresholds[metric]
+                else:
+                    missing.append(metric.value)
+
+            if missing:
+                raise ValueError(
+                    f"Для {label} не заданы thresholds для метрик {missing} "
+                    "(ни глобально в Config.thresholds, ни локально в самой фиче)"
+                )
+            block.resolved_thresholds = merged
+
+        for name, feature in self.features.items():
+            resolve(feature, f"feature '{name}'")
+
+        if self.prediction_metrics.enabled:
+            resolve(self.prediction_metrics, "prediction_metrics")
+
+        return self
 
 
 def read_config(path):
@@ -114,5 +181,5 @@ def read_config(path):
     return config
 
 
-example_config = read_config(r"F:\s21_proj\data-drift-guardian\config\config.yaml")
-print(example_config)
+# example_config = read_config(r"F:\s21_proj\data-drift-guardian\config\config.yaml")
+# print(example_config)

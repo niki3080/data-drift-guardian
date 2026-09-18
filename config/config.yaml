@@ -4,14 +4,17 @@ features:
     metrics:
       - missing_rate
       - psi
-      - mean_zscore
+    thresholds:            # <-- override только для этой фичи
+      psi:
+        warning: 0.05
+        critical: 0.12
 
   income:
     type: numeric
     metrics:
       - missing_rate
       - psi
-      - mean_zscore
+    # thresholds не заданы — psi возьмётся из глобальных
 
   country:
     type: categorical
@@ -24,19 +27,30 @@ features:
 prediction_metrics:
   enabled: true
   score_column: prediction_score
-  threshold: 0.5
+  type: numeric
   metrics:
-    - prediction_score_drift
-    - positive_prediction_rate
+    - psi
 
-thresholds:
+thresholds:               # глобальные дефолты
+  missing_rate:
+    warning: 0.02
+    critical: 0.05
   psi:
     warning: 0.1
     critical: 0.25
-  mean_zscore:
-    warning: 2.0
-    critical: 3.0
   unseen_category_rate:
     warning: 0.05
     critical: 0.1
+  cardinality_ratio:
+    warning: 0.3
+    critical: 0.6
+
+stream_drift:
+  drift_event_time_lag_seconds:
+    warning: 30
+    critical: 120
+  drift_late_events_total:
+    warning: 10
+    critical: 50
+  # остальные поля не заданы — значит не мониторятся
 

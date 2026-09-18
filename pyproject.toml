@@ -1,10 +1,17 @@
 [project]
 name = "drift-guardian"
 version = "0.1.0"
-description = "Add your description here"
+description = "Data drift monitoring for batch and realtime pipelines"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "confluent-kafka>=2.15.0",
+    "pandas>=2.3.3",
+    "prometheus-client>=0.26.0",
+    "pyarrow>=25.0.1",
+    "pydantic>=2.13.0",
+    "pyyaml>=6.0.2",
+]
 
 [project.scripts]
 drift-guardian-report = "drift_guardian.reporting.offline_report:main"
@@ -23,6 +30,4 @@ notebooks = [
     "great-expectations>=1.20.0",
     "nannyml>=0.13.1",
     "nbformat>=4.2.0",
-    "pandas>=2.3.3",
-    "pyarrow>=25.0.1",
 ]

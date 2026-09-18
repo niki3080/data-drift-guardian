@@ -7,7 +7,9 @@ scrape_configs:
       - targets:
           - localhost:9090
 
-  - job_name: drift-mock-exporter
+  # Both realtime analyzer and mock exporter use this Docker network alias.
+  # Run only one profile at a time: --profile realtime OR --profile mock.
+  - job_name: drift-exporter
     static_configs:
       - targets:
-          - drift-mock-exporter:8000
+          - drift-exporter:8000
