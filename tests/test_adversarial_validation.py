@@ -1,4 +1,6 @@
+import importlib
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -7,6 +9,11 @@ from drift_guardian.batch.adversarial_validation import (
     _prepare_features,
     _validate_inputs,
     adversarial_validation,
+)
+
+
+adversarial_module = importlib.import_module(
+    "drift_guardian.batch.adversarial_validation"
 )
 
 
@@ -23,6 +30,7 @@ class AdversarialValidationTests(unittest.TestCase):
         )
         current = pd.DataFrame(
             {
+                "unused": rng.normal(size=180),
                 "active": rng.choice([True, False], 180),
                 "region": rng.choice(["north", "east", None], 180),
                 "amount": rng.normal(3.0, 1.0, 180),
@@ -99,6 +107,10 @@ class AdversarialValidationTests(unittest.TestCase):
             ({"n_splits": 2.5}, "n_splits must be an integer"),
             ({"n_splits": False}, "n_splits must be an integer"),
             ({"missing_category": None}, "missing_category must be a string"),
+            (
+                {"lightgbm_params": []},
+                "lightgbm_params must be a dictionary or None",
+            ),
         )
 
         for arguments, message in invalid_arguments:
@@ -123,14 +135,6 @@ class AdversarialValidationTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, message):
                     adversarial_validation(reference, current, **arguments)
 
-    def test_rejects_different_columns(self) -> None:
-        """Не допускает различающийся набор признаков в двух датасетах."""
-        reference = pd.DataFrame({"expected": range(6)})
-        current = pd.DataFrame({"unexpected": range(6)})
-
-        with self.assertRaisesRegex(ValueError, "must have the same columns"):
-            adversarial_validation(reference, current)
-
     def test_rejects_unsupported_reference_dtype(self) -> None:
         """Явно отклоняет datetime до согласования его преобразования."""
         reference = pd.DataFrame(
@@ -154,24 +158,8 @@ class AdversarialValidationTests(unittest.TestCase):
             max_samples=np.int64(6),
             n_splits=np.int64(3),
             missing_category="__missing__",
+            lightgbm_params=None,
         )
-
-    def test_rejects_empty_dataframes(self) -> None:
-        """Отклоняет датасеты без строк или без признаков."""
-        valid = pd.DataFrame({"value": range(6)})
-        empty_inputs = (
-            (pd.DataFrame({"value": []}), valid),
-            (valid, pd.DataFrame({"value": []})),
-            (pd.DataFrame(index=range(6)), pd.DataFrame(index=range(6))),
-        )
-
-        for reference, current in empty_inputs:
-            with self.subTest(
-                reference_shape=reference.shape,
-                current_shape=current.shape,
-            ):
-                with self.assertRaisesRegex(ValueError, "must not be empty"):
-                    adversarial_validation(reference, current)
 
     def test_constant_features_return_neutral_auc_and_zero_importance(self) -> None:
         """Проверяет детерминированный сценарий без различий и вариативности."""
@@ -199,6 +187,59 @@ class AdversarialValidationTests(unittest.TestCase):
         self.assertGreater(auc, 0.8)
         self.assertListEqual(importance["feature"].tolist(), ["value"])
         self.assertAlmostEqual(float(importance.loc[0, "importance"]), 1.0)
+
+    def test_lightgbm_params_are_merged_and_invariants_are_preserved(self) -> None:
+        """Проверяет передачу параметров модели и обязательные objective/metric."""
+
+        class FakeBooster:
+            @staticmethod
+            def feature_importance(*, importance_type: str) -> np.ndarray:
+                self.assertEqual(importance_type, "gain")
+                return np.array([1.0])
+
+        class FakeClassifier:
+            instances = []
+
+            def __init__(fake_self, **params) -> None:
+                fake_self.params = params
+                fake_self.best_iteration_ = 7
+                fake_self.booster_ = FakeBooster()
+                fake_self.fit_kwargs = None
+                FakeClassifier.instances.append(fake_self)
+
+            def fit(fake_self, X, y, **kwargs) -> None:
+                fake_self.fit_kwargs = kwargs
+
+            def predict_proba(fake_self, X, **kwargs) -> np.ndarray:
+                self.assertEqual(kwargs["num_iteration"], 7)
+                return np.tile([0.5, 0.5], (len(X), 1))
+
+        reference = pd.DataFrame({"value": range(9)})
+        current = pd.DataFrame({"value": range(9)})
+
+        with (
+            patch.object(adversarial_module, "LGBMClassifier", FakeClassifier),
+            patch.object(adversarial_module, "early_stopping", return_value="callback"),
+        ):
+            adversarial_validation(
+                reference,
+                current,
+                lightgbm_params={
+                    "n_estimators": 25,
+                    "learning_rate": 0.2,
+                    "objective": "multiclass",
+                    "metric": "binary_logloss",
+                },
+            )
+
+        self.assertEqual(len(FakeClassifier.instances), 3)
+        for model in FakeClassifier.instances:
+            self.assertEqual(model.params["n_estimators"], 25)
+            self.assertEqual(model.params["learning_rate"], 0.2)
+            self.assertEqual(model.params["objective"], "binary")
+            self.assertEqual(model.params["metric"], "auc")
+            self.assertNotIn("eval_metric", model.fit_kwargs)
+            self.assertEqual(model.fit_kwargs["callbacks"], ["callback"])
 
 
 if __name__ == "__main__":

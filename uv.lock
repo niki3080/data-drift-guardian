@@ -674,6 +674,12 @@ wheels = [
 name = "drift-guardian"
 version = "0.1.0"
 source = { editable = "." }
+dependencies = [
+    { name = "lightgbm" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "scikit-learn" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -690,6 +696,12 @@ notebooks = [
 ]
 
 [package.metadata]
+requires-dist = [
+    { name = "lightgbm", specifier = ">=4.5.0" },
+    { name = "numpy", specifier = ">=2.1.0" },
+    { name = "pandas", specifier = ">=2.2.0" },
+    { name = "scikit-learn", specifier = ">=1.6.0" },
+]
 
 [package.metadata.requires-dev]
 dev = [
