@@ -142,7 +142,8 @@ def adversarial_validation(
         model.fit(
             X_train,
             y_train,
-            eval_set=[(X_val, y_val)],
+            eval_X=X_val,
+            eval_y=y_val,
             callbacks=[
                 early_stopping(
                     stopping_rounds=50,
