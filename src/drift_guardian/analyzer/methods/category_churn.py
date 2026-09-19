@@ -7,7 +7,7 @@ from src.drift_guardian.analyzer.methods.low_level.stats import category_churn
 import pandas as pd
 
 @register(Metric.category_churn)
-def compute_unseen_category_rate(reference_dict: ReferenceDict, current: pd.Series):
+def compute_category_churn(reference_dict: ReferenceDict, current: pd.Series):
     feature = current.name
     assert isinstance(feature, str)
 

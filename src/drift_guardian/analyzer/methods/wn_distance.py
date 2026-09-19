@@ -9,6 +9,7 @@ import pandas as pd
 @register(Metric.wasserstein_distance)
 def compute_wasserstein_distance(reference_dict: ReferenceDict, current: pd.Series):
     feature = current.name
+    assert isinstance(feature, str)
     raw_ref = reference_dict['sample'][feature].dropna()
 
     return wasserstein_distance(raw_ref, current)

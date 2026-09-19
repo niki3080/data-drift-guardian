@@ -14,13 +14,3 @@ def compute_chi2_p_value(reference_dict: ReferenceDict, current: pd.Series) -> f
     reference = find_ref(reference_dict, feature)
     ref_counts, cur_counts = make_counts(reference, current)
     return chi2_p_value(ref_counts, cur_counts)
-
-
-# @register(Metric.cramer_v)
-# def compute_cramer_v(reference_dict: ReferenceDict, current: pd.Series) -> float:
-#     feature = current.name
-#     assert isinstance(feature, str)
-#
-#     reference = find_ref(reference_dict, feature)
-#     ref_counts, cur_counts = make_counts(reference, current)
-#     return psi(ref_counts, cur_counts)
