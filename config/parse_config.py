@@ -17,31 +17,61 @@ class Metric(StrEnum):
     cardinality_ratio = "cardinality_ratio"
     js_divergence = "js_divergence"
     wasserstein_distance = "wasserstein_distance"
-    quantile_drift = "quantile_drift"
     chi2 = "chi2"
     cramer_v = "cramer_v"
     category_churn = "category_churn"
     kstest = "kstest"
 
 
+# Метрики, для которых чем меньше значение, тем хуже.
+# Например, chi2 у вас возвращает p_value:
+# warning = 0.05, critical = 0.01
+#
+# То есть для этих метрик должно выполняться:
+# warning > critical
+REVERSED_THRESHOLD_METRICS: set[Metric] = {
+    Metric.chi2,
+}
+
+
 class ThresholdPair(BaseModel):
     warning: float = Field(..., ge=0.0)
     critical: float = Field(..., ge=0.0)
 
-    @model_validator(mode="after")
-    def warning_below_critical(self):
-        if self.warning >= self.critical:
+
+def validate_threshold_direction(
+    metric: Metric,
+    pair: ThresholdPair,
+    label: str,
+) -> None:
+    """
+    Проверяет корректность направления warning/critical.
+
+    Для обычных метрик:
+        warning < critical
+
+    Для метрик из REVERSED_THRESHOLD_METRICS:
+        warning > critical
+    """
+
+    if metric in REVERSED_THRESHOLD_METRICS:
+        if pair.warning <= pair.critical:
             raise ValueError(
-                f"warning ({self.warning}) должен быть меньше "
-                f"critical ({self.critical})"
+                f"Для {label}.{metric.value} warning ({pair.warning}) "
+                f"должен быть больше critical ({pair.critical})"
             )
-        return self
+    else:
+        if pair.warning >= pair.critical:
+            raise ValueError(
+                f"Для {label}.{metric.value} warning ({pair.warning}) "
+                f"должен быть меньше critical ({pair.critical})"
+            )
 
 
 class TypedMetricsConfig(BaseModel):
     """
     Базовый класс для конфигов, где набор допустимых метрик
-    зависит от типа фичи (numeric / categorical).
+    зависит от типа фичи: numeric / categorical.
     """
 
     type: Optional[FeatureType] = None
@@ -55,6 +85,7 @@ class TypedMetricsConfig(BaseModel):
         Metric.wasserstein_distance,
         Metric.kstest,
     }
+
     CATEGORICAL_ONLY_METRICS: ClassVar[set[Metric]] = {
         Metric.unseen_category_rate,
         Metric.cardinality_ratio,
@@ -68,29 +99,48 @@ class TypedMetricsConfig(BaseModel):
         if self.type is None or not self.metrics:
             return self
 
-        if self.type == FeatureType.categorical and (
-            wrong := set(self.metrics) & self.NUMERIC_ONLY_METRICS
-        ):
-            raise ValueError(
-                f"{[m.value for m in wrong]} недопустим(ы) для categorical-фичей"
-            )
-        if self.type == FeatureType.numeric and (
-            wrong := set(self.metrics) & self.CATEGORICAL_ONLY_METRICS
-        ):
-            raise ValueError(
-                f"{[m.value for m in wrong]} недопустим(ы) для numeric-фичей"
-            )
+        if self.type == FeatureType.categorical:
+            wrong = set(self.metrics) & self.NUMERIC_ONLY_METRICS
+
+            if wrong:
+                raise ValueError(
+                    f"{[m.value for m in wrong]} "
+                    "недопустим(ы) для categorical-фичей"
+                )
+
+        if self.type == FeatureType.numeric:
+            wrong = set(self.metrics) & self.CATEGORICAL_ONLY_METRICS
+
+            if wrong:
+                raise ValueError(
+                    f"{[m.value for m in wrong]} "
+                    "недопустим(ы) для numeric-фичей"
+                )
+
         return self
 
     @model_validator(mode="after")
     def check_thresholds_are_used_metrics(self):
         if self.metrics and self.thresholds:
             extra = set(self.thresholds) - set(self.metrics)
+
             if extra:
                 raise ValueError(
                     f"thresholds заданы для метрик {[m.value for m in extra]}, "
                     "которые не входят в metrics этой фичи"
                 )
+
+        return self
+
+    @model_validator(mode="after")
+    def check_local_threshold_directions(self):
+        for metric, pair in self.thresholds.items():
+            validate_threshold_direction(
+                metric=metric,
+                pair=pair,
+                label="local_thresholds",
+            )
+
         return self
 
 
@@ -109,10 +159,13 @@ class PredictionMetricsConfig(TypedMetricsConfig):
             return self
 
         missing = []
+
         if self.type is None:
             missing.append("type")
+
         if not self.metrics:
             missing.append("metrics")
+
         if self.score_column is None:
             missing.append("score_column")
 
@@ -120,13 +173,19 @@ class PredictionMetricsConfig(TypedMetricsConfig):
             raise ValueError(
                 f"При enabled=True обязательны поля: {', '.join(missing)}"
             )
+
         return self
+
 
 class StreamDriftConfig(BaseModel):
     """
-    Метрики состояния стрима событий (event-time drift monitoring).
+    Метрики состояния стрима событий: event-time drift monitoring.
+
     Каждая метрика опциональна, но если задана — обязана содержать
-    пару warning/critical (это гарантирует сам ThresholdPair).
+    пару warning/critical.
+
+    Для stream_drift используется обычная логика:
+        warning < critical
     """
 
     drift_stream_status: Optional[ThresholdPair] = None
@@ -137,19 +196,49 @@ class StreamDriftConfig(BaseModel):
     drift_late_events_total: Optional[ThresholdPair] = None
     drift_out_of_order_events_total: Optional[ThresholdPair] = None
 
+    @model_validator(mode="after")
+    def check_stream_drift_threshold_directions(self):
+        for field_name in self.__class__.model_fields:
+            pair = getattr(self, field_name)
+
+            if pair is None:
+                continue
+
+            if pair.warning >= pair.critical:
+                raise ValueError(
+                    f"Для stream_drift.{field_name} warning ({pair.warning}) "
+                    f"должен быть меньше critical ({pair.critical})"
+                )
+
+        return self
+
+
 class Config(BaseModel):
     features: Dict[str, FeatureConfig]
     prediction_metrics: PredictionMetricsConfig
     stream_drift: Optional[StreamDriftConfig] = None
 
-    # глобальные дефолтные трешхолды "по метрике" (fallback, если у фичи нет override)
+    # Глобальные дефолтные thresholds по метрике.
+    # Используются как fallback, если у конкретной фичи нет override.
     thresholds: Dict[Metric, ThresholdPair] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def check_global_threshold_directions(self):
+        for metric, pair in self.thresholds.items():
+            validate_threshold_direction(
+                metric=metric,
+                pair=pair,
+                label="global_thresholds",
+            )
+
+        return self
 
     @model_validator(mode="after")
     def resolve_feature_thresholds(self):
         def resolve(block: TypedMetricsConfig, label: str):
             merged: Dict[Metric, ThresholdPair] = {}
             missing: List[str] = []
+
             for metric in block.metrics:
                 if metric in block.thresholds:
                     merged[metric] = block.thresholds[metric]
@@ -163,6 +252,7 @@ class Config(BaseModel):
                     f"Для {label} не заданы thresholds для метрик {missing} "
                     "(ни глобально в Config.thresholds, ни локально в самой фиче)"
                 )
+
             block.resolved_thresholds = merged
 
         for name, feature in self.features.items():
@@ -174,12 +264,12 @@ class Config(BaseModel):
         return self
 
 
-def read_config(path):
+def read_config(path: str) -> Config:
     with open(path) as f:
         raw = yaml.safe_load(f)
-    config = Config(**raw)
-    return config
+
+    return Config(**raw)
 
 
-# example_config = read_config(r"F:\s21_proj\data-drift-guardian\config\config.yaml")
-# print(example_config)
+def config_from_dict(raw: dict) -> Config:
+    return Config(**raw)
