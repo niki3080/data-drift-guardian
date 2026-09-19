@@ -10,9 +10,12 @@ logger = logging.getLogger("schema_checker")
 
 class SchemaChecker:
     """
-    Проверяет входящие события (dict из Kafka) на соответствие схеме
-    референсного pd.DataFrame. Работает per-event, без буферизации
-    и без построения DataFrame на каждое сообщение.
+    Проверяет входящие события (dict из Kafka) или целые DataFrame'ы
+    на соответствие схеме референсного pd.DataFrame.
+
+    check_event  — per-event валидация через pydantic (значения + типы).
+    check_df     — батчевая валидация DataFrame по dtypes колонок
+                   (быстрее, но проверяет только типы, не значения).
 
     Ограничения:
       - nullable-int типы pandas (Int8, Int16, ..., Int64) не поддерживаются
@@ -22,33 +25,19 @@ class SchemaChecker:
         колонки времени kafka-события (по умолчанию "event_time").
     """
 
-    # даункаст-типы numpy/pandas -> python-типы для pydantic
     PANDAS_TO_PY = {
-        # signed int
-        "int8": int,
-        "int16": int,
-        "int32": int,
-        "int64": int,
-        # unsigned int
-        "uint8": int,
-        "uint16": int,
-        "uint32": int,
-        "uint64": int,
-        # float
-        "float16": float,
-        "float32": float,
-        "float64": float,
-        # прочее
+        "int8": int, "int16": int, "int32": int, "int64": int,
+        "uint8": int, "uint16": int, "uint32": int, "uint64": int,
+        "float16": float, "float32": float, "float64": float,
         "bool": bool,
         "object": str,
         "category": str,
     }
 
-    # nullable pandas dtypes, которые явно не поддерживаем
     UNSUPPORTED_DTYPES = {
         "Int8", "Int16", "Int32", "Int64",
         "UInt8", "UInt16", "UInt32", "UInt64",
-        "boolean",  # nullable bool
+        "boolean",
     }
 
     def __init__(
@@ -58,15 +47,6 @@ class SchemaChecker:
         time_column: str = "event_time",
         raise_on_missing_required: bool = True,
     ):
-        """
-        :param reference_df: референсный датафрейм, из dtypes которого строится схема
-        :param required_cols: колонки, критичные для инференса (AV) — при их
-                               отсутствии/несовпадении типа будет Error
-        :param time_column: единственная разрешённая временная колонка
-                             (обычно время kafka-события)
-        :param raise_on_missing_required: кидать исключение (True) или
-                               только логировать критическую ошибку (False)
-        """
         self.reference_df = reference_df
         self.required_cols = required_cols or set()
         self.time_column = time_column
@@ -75,20 +55,46 @@ class SchemaChecker:
         self.reference_columns = set(reference_df.columns)
         self.schema_model: type[BaseModel] = self._build_schema_model()
 
-    # ------------------------------------------------------------------ #
-    # Построение схемы
-    # ------------------------------------------------------------------ #
+    def check_event(self, event: dict[str, Any]) -> tuple[bool, Optional[dict[str, Any]], Optional[str]]:
+        """
+        Валидирует одно событие.
+
+        :return: (is_valid, validated_dict | None, error_message | None)
+        """
+        try:
+            self._check_columns_coverage(set(event.keys()), source_desc="event")
+            validated = self.schema_model(**event)
+        except (ValidationError, ValueError) as e:
+            logger.warning(f"Schema mismatch: {e}")
+            return False, None, str(e)
+
+        return True, validated.model_dump(), None
+
+    def check_df(self, df: pd.DataFrame) -> None:
+        """
+        Валидирует целиком DataFrame (батч событий) на соответствие
+        референсной схеме. В отличие от check_event, проверяет только
+        dtypes колонок целиком, а не значения построчно через pydantic —
+        значительно быстрее для больших DataFrame.
+
+        Ничего не возвращает при успешной проверке (тихо проходит).
+
+        :param df: DataFrame для проверки
+        :raises ValueError: если отсутствует required-колонка либо её dtype
+                             не совпадает с референсным (и raise_on_missing_required=True)
+        """
+        self._check_columns_coverage(set(df.columns), source_desc="DataFrame")
+        self._check_dtypes_df(df)
+
     def _resolve_py_type(self, col: str, dtype: np.dtype) -> type:
         dtype_str = str(dtype)
 
-        # nullable int/bool — явно запрещаем, чтобы не приводить молча
         if dtype_str in self.UNSUPPORTED_DTYPES:
             raise ValueError(
                 f"Column '{col}' has unsupported nullable dtype '{dtype_str}'. "
                 f"Nullable int/bool types are not supported by SchemaChecker."
             )
 
-        # datetime — разрешён только для сконфигурированной колонки времени
         if pd.api.types.is_datetime64_any_dtype(dtype):
             if col != self.time_column:
                 raise ValueError(
@@ -110,39 +116,45 @@ class SchemaChecker:
         for col, dtype in self.reference_df.dtypes.items():
             py_type = self._resolve_py_type(col, dtype)
             if col in self.required_cols:
-                fields[col] = (py_type, ...)  # обязательное поле
+                fields[col] = (py_type, ...)
             else:
-                fields[col] = (Optional[py_type], None)  # опциональное
+                fields[col] = (Optional[py_type], None)
         return create_model("EventSchema", **fields)
 
-    def _check_columns_coverage(self, event: dict[str, Any]) -> None:
-        event_columns = set(event.keys())
-        missing = self.reference_columns - event_columns
+    def _check_columns_coverage(self, present_columns: set[str], source_desc: str = "event") -> None:
+        missing = self.reference_columns - present_columns
         missing_required = missing & self.required_cols
         missing_optional = missing - self.required_cols
 
         if missing_required:
-            msg = f"Missing REQUIRED columns in event: {missing_required}"
+            msg = f"Missing REQUIRED columns in {source_desc}: {missing_required}"
+            logger.error(msg)
             if self.raise_on_missing_required:
                 raise ValueError(msg)
-            logger.error(msg)
 
         if missing_optional:
             logger.warning(
-                f"Missing optional columns (excluded from drift calc): {missing_optional}"
+                f"Missing optional columns in {source_desc} (excluded from drift calc): {missing_optional}"
             )
 
-    def check_event(self, event: dict[str, Any]) -> tuple[bool, Optional[dict[str, Any]], Optional[str]]:
-        """
-        Валидирует одно событие.
+    def _check_dtypes_df(self, df: pd.DataFrame) -> None:
+        for col, expected_dtype in self.reference_df.dtypes.items():
+            if col not in df.columns:
+                continue
 
-        :return: (is_valid, validated_dict | None, error_message | None)
-        """
-        try:
-            self._check_columns_coverage(event)
-            validated = self.schema_model(**event)
-        except (ValidationError, ValueError) as e:
-            logger.warning(f"Schema mismatch: {e}")
-            return False, None, str(e)
+            actual_dtype = df[col].dtype
+            if not pd.api.types.is_dtype_equal(actual_dtype, expected_dtype):
+                msg = (
+                    f"Column '{col}' dtype mismatch: "
+                    f"expected '{expected_dtype}', got '{actual_dtype}'"
+                )
+                if col in self.required_cols:
+                    logger.error(msg)
+                    if self.raise_on_missing_required:
+                        raise ValueError(msg)
+                else:
+                    logger.warning(msg)
 
-        return True, validated.model_dump(), None
+
+
+
