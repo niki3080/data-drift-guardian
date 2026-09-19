@@ -2,49 +2,69 @@
   "_comment": "Temporary integration fixture used until the real drift engine is connected.",
   "metadata": {
     "dataset_name": "demo_reference",
-    "generated_at": "2026-09-17T00:00:00Z",
+    "generated_at": "2026-09-19T00:00:00Z",
     "reference_rows": 10000,
     "current_rows": 1000
   },
   "overall_status": "critical",
-  "active_alerts": 6,
+  "active_alerts": 14,
   "window_size": 1000,
   "features": {
     "age": {
       "type": "numeric",
       "status": "critical",
       "metrics": {
-        "missing_rate": 0.01,
-        "psi": 0.31
+        "missing_rate": {"value": 0.01, "warning": 0.05, "critical": 0.1, "status": "ok"},
+        "psi": {"value": 0.31, "warning": 0.1, "critical": 0.25, "status": "critical"},
+        "js_divergence": {"value": 0.16, "warning": 0.1, "critical": 0.2, "status": "warning"},
+        "wasserstein_distance": {"value": 0.32, "warning": 0.1, "critical": 0.25, "status": "critical"},
+        "quantile_drift": {"value": 0.18, "warning": 0.1, "critical": 0.25, "status": "warning"},
+        "kstest": {"value": 0.27, "warning": 0.1, "critical": 0.2, "status": "critical"}
       },
       "alerts": [
-        "psi_critical"
+        "psi_critical",
+        "js_divergence_warning",
+        "wasserstein_distance_critical",
+        "quantile_drift_warning",
+        "kstest_critical"
       ]
     },
     "income": {
       "type": "numeric",
-      "status": "warning",
+      "status": "ok",
       "metrics": {
-        "missing_rate": 0.03,
-        "psi": 0.04
+        "missing_rate": {"value": 0.01, "warning": 0.05, "critical": 0.1, "status": "ok"},
+        "psi": {"value": 0.04, "warning": 0.1, "critical": 0.25, "status": "ok"},
+        "js_divergence": {"value": 0.03, "warning": 0.1, "critical": 0.2, "status": "ok"},
+        "wasserstein_distance": {"value": 0.05, "warning": 0.1, "critical": 0.25, "status": "ok"},
+        "quantile_drift": {"value": 0.02, "warning": 0.1, "critical": 0.25, "status": "ok"},
+        "kstest": {"value": 0.04, "warning": 0.1, "critical": 0.2, "status": "ok"}
       },
-      "alerts": [
-        "missing_rate_warning"
-      ]
+      "alerts": []
     },
     "country": {
       "type": "categorical",
       "status": "critical",
       "metrics": {
-        "missing_rate": 0.0,
-        "psi": 0.18,
-        "unseen_category_rate": 0.12,
-        "cardinality_ratio": 1.5
+        "missing_rate": {"value": 0.0, "warning": 0.05, "critical": 0.1, "status": "ok"},
+        "psi": {"value": 0.18, "warning": 0.1, "critical": 0.25, "status": "warning"},
+        "js_divergence": {"value": 0.14, "warning": 0.1, "critical": 0.2, "status": "warning"},
+        "quantile_drift": {"value": 0.31, "warning": 0.1, "critical": 0.25, "status": "critical"},
+        "unseen_category_rate": {"value": 0.12, "warning": 0.05, "critical": 0.1, "status": "critical"},
+        "cardinality_ratio": {"value": 1.5, "warning": 0.3, "critical": 0.6, "status": "critical"},
+        "chi2": {"value": 0.16, "warning": 0.1, "critical": 0.2, "status": "warning"},
+        "cramer_v": {"value": 0.34, "warning": 0.1, "critical": 0.3, "status": "critical"},
+        "category_churn": {"value": 0.16, "warning": 0.1, "critical": 0.25, "status": "warning"}
       },
       "alerts": [
         "psi_warning",
+        "js_divergence_warning",
+        "quantile_drift_critical",
         "unseen_category_rate_critical",
-        "cardinality_ratio_critical"
+        "cardinality_ratio_critical",
+        "chi2_warning",
+        "cramer_v_critical",
+        "category_churn_warning"
       ]
     }
   },
@@ -52,10 +72,8 @@
     "type": "numeric",
     "status": "warning",
     "metrics": {
-      "psi": 0.11
+      "psi": {"value": 0.11, "warning": 0.1, "critical": 0.25, "status": "warning"}
     },
-    "alerts": [
-      "psi_warning"
-    ]
+    "alerts": ["psi_warning"]
   }
 }
