@@ -1,8 +1,10 @@
 from src.drift_guardian.analyzer.regestry.metric_registry import METRIC_REGISTRY
+from src.drift_guardian.analyzer.methods.batch.adversarial_validation import adversarial_validation
 from src.drift_guardian.schema.models import ReferenceDict, MetricFn
 from config.parse_config import Metric
 from src.drift_guardian.analyzer.utils import find_ref
 
+from typing import Any
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -32,6 +34,25 @@ class DriftMetricsEngine:
             prediction_result = self._analyze_column(reference_dict, current[prediction_column], config, 'prediction')
 
         return self._make_report(feature_results, prediction_result)
+
+    def run_adversarial_validation(self,
+                                   current: pd.DataFrame,
+                                   max_samples: int = 100_000,
+                                   n_splits: int = 3,
+                                   random_state: int = 42,
+                                   missing_category: str = "__missing__",
+                                   lightgbm_params: dict[str, Any] | None = None,):
+
+        sample_df = self.reference_dict['sample']
+        av_results = adversarial_validation(sample_df,
+                                           current,
+                                           max_samples=max_samples,
+                                           n_splits=n_splits,
+                                           random_state=random_state,
+                                           missing_category=missing_category,
+                                           lightgbm_params=lightgbm_params)
+
+        return av_results
 
     def _analyze_column(self, reference_dict: ReferenceDict, column_current: pd.Series, config, column_type='feature'):
             column_name = column_current.name
