@@ -143,7 +143,16 @@ class SchemaChecker:
                 continue
 
             actual_dtype = df[col].dtype
-            if not pd.api.types.is_dtype_equal(actual_dtype, expected_dtype):
+
+            # Для category сравниваем только "форму" типа, а не конкретный
+            # набор категорий/ordered — иначе разные наборы значений
+            # ошибочно считаются несовместимыми типами.
+            if isinstance(expected_dtype, pd.CategoricalDtype):
+                dtypes_match = isinstance(actual_dtype, pd.CategoricalDtype)
+            else:
+                dtypes_match = pd.api.types.is_dtype_equal(actual_dtype, expected_dtype)
+
+            if not dtypes_match:
                 msg = (
                     f"Column '{col}' dtype mismatch: "
                     f"expected '{expected_dtype}', got '{actual_dtype}'"
@@ -154,6 +163,7 @@ class SchemaChecker:
                         raise ValueError(msg)
                 else:
                     logger.warning(msg)
+
 
 
 
