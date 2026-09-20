@@ -8,7 +8,6 @@ from html import escape
 from pathlib import Path
 from typing import Any, Mapping
 
-
 DEFAULT_CSS_PATH = Path(__file__).with_name("styles") / "report.css"
 
 

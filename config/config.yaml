@@ -31,6 +31,14 @@ prediction_metrics:
   metrics:
     - psi
 
+# ROC-AUC thresholds for AV are not specified by the assignment.
+# They are explicit project defaults and can be changed without code edits.
+adversarial_validation:
+  enabled: true
+  thresholds:
+    warning: 0.60
+    critical: 0.75
+
 thresholds:               # глобальные дефолты
   missing_rate:
     warning: 0.02

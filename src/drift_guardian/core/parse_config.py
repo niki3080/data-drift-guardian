@@ -1,8 +1,8 @@
-from typing import Dict, List, ClassVar, Optional
 from enum import StrEnum
+from typing import ClassVar, Dict, List, Optional
 
-from pydantic import BaseModel, Field, model_validator
 import yaml
+from pydantic import BaseModel, Field, model_validator
 
 
 class FeatureType(StrEnum):
@@ -28,14 +28,28 @@ class ThresholdPair(BaseModel):
     warning: float = Field(..., ge=0.0)
     critical: float = Field(..., ge=0.0)
 
-    @model_validator(mode="after")
-    def warning_below_critical(self):
-        if self.warning >= self.critical:
+
+REVERSED_THRESHOLD_METRICS: set[Metric] = {Metric.chi2}
+
+
+def _validate_metric_threshold(
+    metric: Metric,
+    pair: ThresholdPair,
+    label: str,
+) -> None:
+    if metric in REVERSED_THRESHOLD_METRICS:
+        if pair.warning <= pair.critical:
             raise ValueError(
-                f"warning ({self.warning}) должен быть меньше "
-                f"critical ({self.critical})"
+                f"Для {label}.{metric.value} warning ({pair.warning}) должен быть "
+                f"больше critical ({pair.critical})"
             )
-        return self
+        return
+
+    if pair.warning >= pair.critical:
+        raise ValueError(
+            f"Для {label}.{metric.value} warning ({pair.warning}) должен быть "
+            f"меньше critical ({pair.critical})"
+        )
 
 
 class TypedMetricsConfig(BaseModel):
@@ -125,8 +139,8 @@ class PredictionMetricsConfig(TypedMetricsConfig):
 class StreamDriftConfig(BaseModel):
     """
     Метрики состояния стрима событий (event-time drift monitoring).
-    Каждая метрика опциональна, но если задана — обязана содержать
-    пару warning/critical (это гарантирует сам ThresholdPair).
+    Каждая заданная метрика обязана содержать корректную пару
+    warning/critical с обычным направлением: warning < critical.
     """
 
     drift_stream_status: Optional[ThresholdPair] = None
@@ -137,13 +151,58 @@ class StreamDriftConfig(BaseModel):
     drift_late_events_total: Optional[ThresholdPair] = None
     drift_out_of_order_events_total: Optional[ThresholdPair] = None
 
+    @model_validator(mode="after")
+    def validate_thresholds(self):
+        for name, pair in self.__dict__.items():
+            if isinstance(pair, ThresholdPair) and pair.warning >= pair.critical:
+                raise ValueError(
+                    f"Для stream_drift.{name} warning ({pair.warning}) должен быть "
+                    f"меньше critical ({pair.critical})"
+                )
+        return self
+
+
+class AdversarialValidationConfig(BaseModel):
+    """Настройки dataset-level drift status по ROC-AUC adversarial validation."""
+
+    enabled: bool = True
+    thresholds: Optional[ThresholdPair] = None
+
+    @model_validator(mode="after")
+    def validate_auc_thresholds(self):
+        pair = self.thresholds
+        if pair is None:
+            return self
+        if not (0.5 <= pair.warning < pair.critical <= 1.0):
+            raise ValueError(
+                "Для adversarial_validation.thresholds требуется "
+                "0.5 <= warning < critical <= 1.0"
+            )
+        return self
+
+
 class Config(BaseModel):
     features: Dict[str, FeatureConfig]
     prediction_metrics: PredictionMetricsConfig
     stream_drift: Optional[StreamDriftConfig] = None
+    adversarial_validation: Optional[AdversarialValidationConfig] = None
 
     # глобальные дефолтные трешхолды "по метрике" (fallback, если у фичи нет override)
     thresholds: Dict[Metric, ThresholdPair] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_metric_thresholds(self):
+        for metric, pair in self.thresholds.items():
+            _validate_metric_threshold(metric, pair, "thresholds")
+
+        for name, feature in self.features.items():
+            for metric, pair in feature.thresholds.items():
+                _validate_metric_threshold(metric, pair, f"feature '{name}'")
+
+        for metric, pair in self.prediction_metrics.thresholds.items():
+            _validate_metric_threshold(metric, pair, "prediction_metrics")
+
+        return self
 
     @model_validator(mode="after")
     def resolve_feature_thresholds(self):

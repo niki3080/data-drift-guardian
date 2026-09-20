@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -10,11 +11,13 @@ from typing import Any
 import pandas as pd
 import yaml
 
+from drift_guardian.batch.adversarial_validation import adversarial_validation
 from drift_guardian.data_quality_checker.checker import SchemaChecker
 from drift_guardian.engine import analyze_dataframe
 from drift_guardian.ingestion.demo_reference import write_demo_reference
 
 CoreAnalyzer = Callable[[pd.DataFrame, pd.DataFrame], dict[str, Any]]
+AdversarialAnalyzer = Callable[..., tuple[float, pd.DataFrame]]
 
 
 def _utc_now_iso() -> str:
@@ -32,6 +35,67 @@ def _env_flag(name: str, default: bool = False) -> bool:
         return False
     raise ValueError(f"{name} must be a boolean value")
 
+
+def _parse_av_thresholds(raw: Any) -> dict[str, float]:
+    """Парсит ROC-AUC thresholds для AV status из runtime-конфига."""
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ValueError("adversarial_validation.thresholds must be a mapping")
+
+    parsed: dict[str, float] = {}
+    for level in ("warning", "critical"):
+        value = raw.get(level)
+        if value is not None:
+            parsed[level] = float(value)
+
+    if not parsed:
+        return {}
+    if set(parsed) != {"warning", "critical"}:
+        raise ValueError(
+            "adversarial_validation.thresholds must define warning and critical"
+        )
+
+    warning = parsed["warning"]
+    critical = parsed["critical"]
+    if not (0.5 <= warning < critical <= 1.0):
+        raise ValueError(
+            "AV ROC-AUC thresholds must satisfy "
+            "0.5 <= warning < critical <= 1.0"
+        )
+    return parsed
+
+
+def _av_status(roc_auc: float, thresholds: dict[str, float]) -> str | None:
+    """Возвращает AV drift status, если thresholds явно настроены."""
+    if not thresholds:
+        return None
+    if roc_auc >= thresholds["critical"]:
+        return "critical"
+    if roc_auc >= thresholds["warning"]:
+        return "warning"
+    return "ok"
+
+
+
+
+def _importance_similarity_previous(
+    current: dict[str, float],
+    previous: dict[str, float],
+) -> float | None:
+    """Cosine similarity AV importance vectors between consecutive windows."""
+    if not previous:
+        return None
+
+    features = set(current) | set(previous)
+    dot = sum(current.get(name, 0.0) * previous.get(name, 0.0) for name in features)
+    current_norm = math.sqrt(sum(current.get(name, 0.0) ** 2 for name in features))
+    previous_norm = math.sqrt(sum(previous.get(name, 0.0) ** 2 for name in features))
+    if current_norm == 0.0 and previous_norm == 0.0:
+        return 1.0
+    if current_norm == 0.0 or previous_norm == 0.0:
+        return 0.0
+    return float(dot / (current_norm * previous_norm))
 
 def load_reference_dataframe(path: str | Path) -> pd.DataFrame:
     """Загружает reference dataset из CSV или Parquet."""
@@ -63,6 +127,8 @@ def load_runtime_contract(path: str | Path) -> dict[str, Any]:
             "monitored_columns": [],
             "thresholds": {},
             "prediction_type": None,
+            "adversarial_enabled": True,
+            "adversarial_thresholds": {},
         }
 
     with config_path.open(encoding="utf-8") as file:
@@ -99,12 +165,24 @@ def load_runtime_contract(path: str | Path) -> dict[str, Any]:
         if parsed:
             normalized_thresholds[str(metric)] = parsed
 
+    adversarial = raw.get("adversarial_validation") or {}
+    if not isinstance(adversarial, dict):
+        raise ValueError("config.adversarial_validation must be a mapping")
+    adversarial_enabled = adversarial.get("enabled", True)
+    if not isinstance(adversarial_enabled, bool):
+        raise ValueError("adversarial_validation.enabled must be boolean")
+    adversarial_thresholds = _parse_av_thresholds(
+        adversarial.get("thresholds")
+    )
+
     # сохраняем порядок из конфига и удаляем дубликаты
     monitored_columns = list(dict.fromkeys(monitored_columns))
     return {
         "monitored_columns": monitored_columns,
         "thresholds": normalized_thresholds,
         "prediction_type": str(prediction_type) if prediction_type else None,
+        "adversarial_enabled": adversarial_enabled,
+        "adversarial_thresholds": adversarial_thresholds,
     }
 
 
@@ -123,6 +201,12 @@ class EngineAdapter:
     thresholds: dict[str, dict[str, float]] = field(default_factory=dict)
     prediction_type: str | None = None
     schema_checker: SchemaChecker | None = None
+    adversarial_analyzer: AdversarialAnalyzer | None = None
+    adversarial_top_features: int = 10
+    adversarial_thresholds: dict[str, float] = field(default_factory=dict)
+    _previous_av_importance: dict[str, float] = field(
+        default_factory=dict, init=False, repr=False
+    )
 
     @classmethod
     def from_path(
@@ -134,10 +218,14 @@ class EngineAdapter:
         config_path: str | Path = "config/config.yaml",
         core_analyzer: CoreAnalyzer = analyze_dataframe,
         enable_schema_check: bool = True,
+        enable_adversarial_validation: bool = True,
+        adversarial_top_features: int = 10,
     ) -> EngineAdapter:
         """Создаёт адаптер из reference dataset и runtime-конфига."""
         if sample_size <= 0:
             raise ValueError("reference sample_size must be positive")
+        if adversarial_top_features <= 0:
+            raise ValueError("adversarial_top_features must be positive")
 
         reference_path = Path(path)
         full_reference = load_reference_dataframe(reference_path)
@@ -184,6 +272,13 @@ class EngineAdapter:
             thresholds=contract["thresholds"],
             prediction_type=contract["prediction_type"],
             schema_checker=checker,
+            adversarial_analyzer=(
+                adversarial_validation
+                if enable_adversarial_validation and contract["adversarial_enabled"]
+                else None
+            ),
+            adversarial_top_features=adversarial_top_features,
+            adversarial_thresholds=contract["adversarial_thresholds"],
         )
 
     def validate_features(self, features: dict[str, Any]) -> dict[str, Any]:
@@ -196,6 +291,9 @@ class EngineAdapter:
         return validated
 
     def __call__(self, current_df: pd.DataFrame) -> dict[str, Any]:
+        if self.schema_checker is not None:
+            self.schema_checker.check_df(current_df)
+
         report = self.core_analyzer(self.reference_df, current_df)
         if not isinstance(report, dict):
             raise TypeError("analyze_dataframe must return dict[str, Any]")
@@ -204,6 +302,68 @@ class EngineAdapter:
         runtime_report["window_size"] = len(current_df)
         if not runtime_report.get("timestamp"):
             runtime_report["timestamp"] = _utc_now_iso()
+
+        if (
+            self.adversarial_analyzer is not None
+            and min(len(self.reference_df), len(current_df)) >= 3
+        ):
+            roc_auc, importance = self.adversarial_analyzer(
+                self.reference_df,
+                current_df,
+            )
+            top1_importance_share = float(importance.head(1)["importance"].sum())
+            top3_importance_share = float(importance.head(3)["importance"].sum())
+            current_importance = {
+                str(row.feature): float(row.importance)
+                for row in importance.itertuples(index=False)
+            }
+            driver_similarity_previous = _importance_similarity_previous(
+                current_importance,
+                self._previous_av_importance,
+            )
+            self._previous_av_importance = current_importance
+            av_diagnostics = {
+                key: importance.attrs.get(key)
+                for key in (
+                    "roc_auc_cv_mean",
+                    "roc_auc_cv_std",
+                    "roc_auc_cv_min",
+                    "roc_auc_cv_max",
+                    "driver_consistency",
+                )
+            }
+            av_block: dict[str, Any] = {
+                "timestamp": runtime_report["timestamp"],
+                "roc_auc": roc_auc,
+                "top1_importance_share": top1_importance_share,
+                "top3_importance_share": top3_importance_share,
+                "reference_rows": len(self.reference_df),
+                "current_rows": len(current_df),
+                # AV выравнивает классы, поэтому это число строк на один класс.
+                "dataset_size": min(len(self.reference_df), len(current_df)),
+                "features_evaluated": len(importance),
+                "reference_sample_fraction": (
+                    min(len(self.reference_df), len(current_df)) / len(self.reference_df)
+                ),
+                "current_sample_fraction": (
+                    min(len(self.reference_df), len(current_df)) / len(current_df)
+                ),
+                "thresholds": dict(self.adversarial_thresholds),
+                "feature_importance": (
+                    importance.head(self.adversarial_top_features)
+                    .loc[:, ["feature", "importance", "rank"]]
+                    .to_dict(orient="records")
+                ),
+            }
+            for key, value in av_diagnostics.items():
+                if value is not None:
+                    av_block[key] = float(value)
+            if driver_similarity_previous is not None:
+                av_block["driver_similarity_previous"] = driver_similarity_previous
+            status = _av_status(float(roc_auc), self.adversarial_thresholds)
+            if status is not None:
+                av_block["status"] = status
+            runtime_report["adversarial_validation"] = av_block
 
         report_thresholds = runtime_report.get("thresholds")
         merged_thresholds = {
@@ -254,6 +414,11 @@ def build_engine_adapter_from_env(window_size: int) -> EngineAdapter:
     random_state = int(os.getenv("REFERENCE_SAMPLE_RANDOM_STATE", "42"))
     config_path = os.getenv("DRIFT_CONFIG_PATH", "config/config.yaml")
     enable_schema_check = _env_flag("ENABLE_SCHEMA_CHECK", True)
+    enable_adversarial_validation = _env_flag(
+        "ENABLE_ADVERSARIAL_VALIDATION",
+        True,
+    )
+    adversarial_top_features = int(os.getenv("ADVERSARIAL_TOP_FEATURES", "10"))
 
     if sample_multiplier <= 0:
         raise ValueError("REFERENCE_SAMPLE_MULTIPLIER must be positive")
@@ -264,4 +429,6 @@ def build_engine_adapter_from_env(window_size: int) -> EngineAdapter:
         random_state=random_state,
         config_path=config_path,
         enable_schema_check=enable_schema_check,
+        enable_adversarial_validation=enable_adversarial_validation,
+        adversarial_top_features=adversarial_top_features,
     )
