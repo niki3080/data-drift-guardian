@@ -8,7 +8,6 @@ import pandas as pd
 from pandas.api.types import (
     is_datetime64_any_dtype,
     is_timedelta64_dtype,
-    is_period_dtype,
     is_numeric_dtype,
     is_bool_dtype,
     is_integer_dtype,
@@ -21,7 +20,7 @@ class Profiler:
     def __init__(
         self,
         ref_data: pd.DataFrame,
-        window_size: int,
+        window_size: int | None = None,
         num_features: list | None = None,
         cat_features: list | None = None,
         prediction: str | None = None,
@@ -78,11 +77,15 @@ class Profiler:
             )
 
         # Validate window_size
-        if not isinstance(window_size, int) or isinstance(window_size, bool):
-            raise ValueError(f"window_size must be int, got {type(window_size)}")
+        if take_sample:
+            if not isinstance(window_size, int) or isinstance(window_size, bool):
+                raise ValueError(f"If take_sample=True, window_size must be int, got {type(window_size)}")
 
-        if window_size <= 0:
-            raise ValueError(f"window_size must be greater than 0, got {window_size}")
+            if window_size <= 0:
+                raise ValueError(f"If take_sample=True, window_size must be greater than 0, got {window_size}")
+        else:
+            if window_size is not None:
+                warnings.warn(f"If take_sample=False, window_size does nothing")
 
         # Validate merge_threshold
         if not isinstance(merge_threshold, int) or isinstance(merge_threshold, bool):
@@ -343,7 +346,6 @@ class Profiler:
         thresh = self.merge_threshold
 
         missing = column.isna().sum()
-        cardinality_ratio = column.nunique() / len(column.dropna())
 
         if missing == len(column):
             raise ValueError(f"All values in column '{cat_feature}' is missing")
@@ -351,6 +353,7 @@ class Profiler:
         missing_rate = missing / len(column)
         n_without_missing = len(column) - missing
 
+        cardinality_ratio = column.nunique() / len(column.dropna())
         counts = column.value_counts()
 
         proportions: dict[Hashable, float] = (counts / n_without_missing).to_dict()
@@ -390,7 +393,7 @@ class Profiler:
             return dtype
         elif is_timedelta64_dtype(dtype):
             return dtype
-        elif is_period_dtype(dtype):
+        elif isinstance(dtype, pd.PeriodDtype):
             return dtype
         return False
 
