@@ -149,12 +149,12 @@ class DriftMetricsEngine:
         metric_status = "ok"
 
         if lower_is_better:
-            if  thresh_critical > metric_value > thresh_warning:
+            if thresh_critical >= metric_value > thresh_warning:
                 metric_status = "warning"
             elif metric_value > thresh_critical:
                 metric_status = "critical"
         else:
-            if thresh_critical < metric_value < thresh_warning:
+            if thresh_critical <= metric_value < thresh_warning:
                 metric_status = "warning"
             elif metric_value < thresh_critical:
                 metric_status = "critical"
