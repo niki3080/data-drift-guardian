@@ -34,3 +34,8 @@ notebooks = [
     "nannyml>=0.13.1",
     "nbformat>=4.2.0",
 ]
+
+[tool.isort]
+profile = "black"
+known_first_party = ["drift_guardian"]
+src_paths = ["src", "tests", "monitoring"]

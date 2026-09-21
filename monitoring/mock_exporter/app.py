@@ -4,8 +4,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-from prometheus_client import Counter, Gauge, start_http_server
-
+from prometheus_client import Counter, Gauge, Info, start_http_server
 
 EVENT_INTERVAL_SECONDS = 0.01
 WINDOW_SIZE = 1000
@@ -18,6 +17,10 @@ STATE_CYCLE_SECONDS = (
     + WARNING_DURATION_SECONDS
     + CRITICAL_DURATION_SECONDS
 )
+ANALYSIS_SEQUENCE = 0
+PREVIOUS_AV_IMPORTANCE: dict[str, float] = {}
+AV_WARNING_AUC = 0.60
+AV_CRITICAL_AUC = 0.75
 
 
 # Глобальные метрики
@@ -49,6 +52,17 @@ last_analysis_age_seconds = Gauge(
 report_timestamp_seconds = Gauge(
     "drift_report_timestamp_seconds",
     "Unix timestamp carried by the latest drift report",
+)
+
+reference_profile_info = Info(
+    "drift_reference_profile",
+    "Metadata of the active reference sample",
+)
+reference_profile_info.info(
+    {
+        "dataset_name": "demo_reference",
+        "profile_created_at": "2026-09-20T00:00:00Z",
+    }
 )
 
 window_size.set(WINDOW_SIZE)
@@ -120,6 +134,90 @@ metric_threshold = Gauge(
     ["metric", "level"],
 )
 
+av_status = Gauge(
+    "drift_av_status",
+    "Adversarial validation status: -1=not configured, 0=ok, 1=warning, 2=critical",
+)
+av_available = Gauge(
+    "drift_av_available",
+    "Whether an adversarial validation result is available: 0=no, 1=yes",
+)
+av_roc_auc = Gauge(
+    "drift_av_roc_auc",
+    "Adversarial validation ROC AUC",
+)
+av_roc_auc_cv_std = Gauge(
+    "drift_av_roc_auc_cv_std",
+    "Standard deviation of fold ROC AUC values in adversarial validation",
+)
+av_roc_auc_cv_mean = Gauge(
+    "drift_av_roc_auc_cv_mean",
+    "Mean ROC AUC across adversarial-validation CV folds",
+)
+av_roc_auc_cv_min = Gauge(
+    "drift_av_roc_auc_cv_min",
+    "Worst ROC AUC across adversarial-validation CV folds",
+)
+av_roc_auc_cv_max = Gauge(
+    "drift_av_roc_auc_cv_max",
+    "Best ROC AUC across adversarial-validation CV folds",
+)
+av_driver_consistency = Gauge(
+    "drift_av_driver_consistency",
+    "Feature-importance consistency across adversarial-validation CV folds",
+)
+av_driver_similarity_previous = Gauge(
+    "drift_av_driver_similarity_previous",
+    "Cosine similarity of AV feature importance to the previous completed AV run",
+)
+av_top1_importance_share = Gauge(
+    "drift_av_top1_importance_share",
+    "Share of total AV feature importance explained by the strongest driver",
+)
+av_top3_importance_share = Gauge(
+    "drift_av_top3_importance_share",
+    "Share of total AV feature importance explained by the top three drivers",
+)
+av_timestamp_seconds = Gauge(
+    "drift_av_timestamp_seconds",
+    "Timestamp of the latest adversarial validation run",
+)
+av_last_run_timestamp_seconds = Gauge(
+    "drift_av_last_run_timestamp_seconds",
+    "Unix timestamp of the latest adversarial validation run",
+)
+av_dataset_size = Gauge(
+    "drift_av_dataset_size",
+    "Balanced rows per dataset used by adversarial validation",
+)
+av_reference_rows = Gauge(
+    "drift_av_reference_rows",
+    "Reference rows used by adversarial validation",
+)
+av_current_rows = Gauge(
+    "drift_av_current_rows",
+    "Current rows available to adversarial validation",
+)
+av_features_evaluated = Gauge(
+    "drift_av_features_evaluated",
+    "Number of features evaluated by adversarial validation",
+)
+av_sample_fraction = Gauge(
+    "drift_av_sample_fraction",
+    "Fraction of each source dataset used in the balanced AV sample",
+    ["dataset"],
+)
+av_feature_importance = Gauge(
+    "drift_av_feature_importance",
+    "Top adversarial-validation feature importance",
+    ["feature", "rank"],
+)
+av_threshold = Gauge(
+    "drift_av_threshold",
+    "Configured adversarial-validation ROC-AUC thresholds",
+    ["level"],
+)
+
 
 SEVERITY_TO_CODE = {
     "insufficient_data": -1,
@@ -178,16 +276,119 @@ def _export_feature(
         )
 
 
+def export_adversarial_validation(timestamp: datetime) -> None:
+    """Публикует demo-результат AV для разработки Grafana-панели."""
+    auc_values = (0.54, 0.66, 0.80)
+    roc_auc = auc_values[(ANALYSIS_SEQUENCE - 1) % len(auc_values)]
+    if roc_auc >= AV_CRITICAL_AUC:
+        status = 2
+    elif roc_auc >= AV_WARNING_AUC:
+        status = 1
+    else:
+        status = 0
+
+    av_available.set(1)
+    av_status.set(status)
+    av_roc_auc.set(roc_auc)
+    scenario_index = (ANALYSIS_SEQUENCE - 1) % len(auc_values)
+    auc_std_values = (0.008, 0.018, 0.032)
+    auc_min_values = (0.529, 0.638, 0.761)
+    auc_max_values = (0.551, 0.682, 0.839)
+    driver_consistency_values = (0.94, 0.86, 0.72)
+    av_roc_auc_cv_std.set(auc_std_values[scenario_index])
+    av_roc_auc_cv_mean.set(roc_auc)
+    av_roc_auc_cv_min.set(auc_min_values[scenario_index])
+    av_roc_auc_cv_max.set(auc_max_values[scenario_index])
+    av_driver_consistency.set(driver_consistency_values[scenario_index])
+    av_timestamp_seconds.set(timestamp.timestamp())
+    av_last_run_timestamp_seconds.set(timestamp.timestamp())
+    av_reference_rows.set(10_000)
+    av_current_rows.set(WINDOW_SIZE)
+    av_dataset_size.set(WINDOW_SIZE)
+    av_features_evaluated.set(len(FEATURE_LABELS) - 1)
+    av_sample_fraction.clear()
+    av_sample_fraction.labels(dataset="reference").set(WINDOW_SIZE / 10_000)
+    av_sample_fraction.labels(dataset="current").set(1.0)
+    av_threshold.clear()
+    av_threshold.labels(level="warning").set(AV_WARNING_AUC)
+    av_threshold.labels(level="critical").set(AV_CRITICAL_AUC)
+    av_feature_importance.clear()
+
+    top_feature_scenarios = (
+        (
+            ("age", 0.29),
+            ("income", 0.21),
+            ("country", 0.14),
+            ("balance", 0.10),
+            ("monthly_spend", 0.08),
+            ("device_type", 0.06),
+            ("transactions", 0.04),
+            ("region", 0.03),
+            ("credit_score", 0.03),
+            ("channel", 0.02),
+        ),
+        (
+            ("income", 0.25),
+            ("age", 0.19),
+            ("monthly_spend", 0.15),
+            ("country", 0.10),
+            ("balance", 0.08),
+            ("transactions", 0.07),
+            ("device_type", 0.05),
+            ("credit_score", 0.04),
+            ("region", 0.04),
+            ("channel", 0.03),
+        ),
+        (
+            ("country", 0.22),
+            ("income", 0.20),
+            ("age", 0.16),
+            ("device_type", 0.12),
+            ("monthly_spend", 0.09),
+            ("balance", 0.07),
+            ("region", 0.05),
+            ("transactions", 0.04),
+            ("credit_score", 0.03),
+            ("channel", 0.02),
+        ),
+    )
+    top_features = top_feature_scenarios[scenario_index]
+    current_importance = dict(top_features)
+    global PREVIOUS_AV_IMPORTANCE
+    if PREVIOUS_AV_IMPORTANCE:
+        features = set(current_importance) | set(PREVIOUS_AV_IMPORTANCE)
+        dot = sum(
+            current_importance.get(name, 0.0) * PREVIOUS_AV_IMPORTANCE.get(name, 0.0)
+            for name in features
+        )
+        current_norm = sum(current_importance.get(name, 0.0) ** 2 for name in features) ** 0.5
+        previous_norm = sum(PREVIOUS_AV_IMPORTANCE.get(name, 0.0) ** 2 for name in features) ** 0.5
+        similarity = dot / (current_norm * previous_norm) if current_norm and previous_norm else 0.0
+        av_driver_similarity_previous.set(similarity)
+    else:
+        av_driver_similarity_previous.set(-1)
+    PREVIOUS_AV_IMPORTANCE = current_importance
+    av_top1_importance_share.set(top_features[0][1])
+    av_top3_importance_share.set(sum(value for _, value in top_features[:3]))
+    for rank, (feature, importance) in enumerate(top_features, start=1):
+        av_feature_importance.labels(
+            feature=feature,
+            rank=str(rank),
+        ).set(importance)
+
+
 def set_critical_scenario() -> None:
-    """Заполняет exporter небольшим согласованным drift-report."""
+    """Заполняет exporter согласованным demo drift-report."""
+    global ANALYSIS_SEQUENCE
+    ANALYSIS_SEQUENCE += 1
     thresholds = {
         "psi": {"warning": 0.1, "critical": 0.25},
-        "missing_rate": {"warning": 0.05, "critical": 0.1},
+        "missing_rate": {"warning": 0.02, "critical": 0.05},
         "unseen_category_rate": {"warning": 0.05, "critical": 0.1},
-        "cardinality_ratio": {"warning": 1.3, "critical": 2.0},
+        "cardinality_ratio": {"warning": 0.3, "critical": 0.6},
         "js_divergence": {"warning": 0.1, "critical": 0.25},
         "wasserstein_distance": {"warning": 0.1, "critical": 0.25},
-        "chi2": {"warning": 3.84, "critical": 6.63},
+        "chi2": {"warning": 0.05, "critical": 0.01},
         "cramer_v": {"warning": 0.1, "critical": 0.25},
         "category_churn": {"warning": 0.1, "critical": 0.25},
         "kstest": {"warning": 0.1, "critical": 0.2},
@@ -200,9 +401,18 @@ def set_critical_scenario() -> None:
     ) -> dict[str, Any]:
         results: dict[str, dict[str, Any]] = {}
         for metric_name, value in values.items():
+            phase = ((ANALYSIS_SEQUENCE + len(metric_name)) % 5) - 2
+            value = max(0.0, value * (1.0 + phase * 0.03))
             warning = thresholds[metric_name]["warning"]
             critical = thresholds[metric_name]["critical"]
-            if value >= critical:
+            if metric_name == "chi2":
+                if value <= critical:
+                    status = "critical"
+                elif value <= warning:
+                    status = "warning"
+                else:
+                    status = "ok"
+            elif value >= critical:
                 status = "critical"
             elif value >= warning:
                 status = "warning"
@@ -238,9 +448,9 @@ def set_critical_scenario() -> None:
         "psi": 0.04,
         "missing_rate": 0.01,
         "unseen_category_rate": 0.01,
-        "cardinality_ratio": 1.05,
+        "cardinality_ratio": 0.05,
         "js_divergence": 0.03,
-        "chi2": 1.2,
+        "chi2": 0.8,
         "cramer_v": 0.04,
         "category_churn": 0.03,
     }
@@ -263,16 +473,67 @@ def set_critical_scenario() -> None:
     }
     categorical_features = {
         # один warning-алерт
-        "country": {"unseen_category_rate": 0.06},
-        "device_type": {"psi": 0.03, "missing_rate": 0.01, "unseen_category_rate": 0.01, "cramer_v": 0.04},
-        "channel": {"psi": 0.04, "missing_rate": 0.01, "unseen_category_rate": 0.02, "cramer_v": 0.03},
-        "region": {"psi": 0.06, "missing_rate": 0.02, "unseen_category_rate": 0.01, "cramer_v": 0.05},
-        "product": {"psi": 0.03, "missing_rate": 0.00, "unseen_category_rate": 0.02, "cramer_v": 0.04},
-        "customer_segment": {"psi": 0.07, "missing_rate": 0.01, "unseen_category_rate": 0.03, "cramer_v": 0.06},
-        "plan_type": {"psi": 0.05, "missing_rate": 0.02, "unseen_category_rate": 0.01, "cramer_v": 0.04},
-        "browser": {"psi": 0.04, "missing_rate": 0.01, "unseen_category_rate": 0.02, "cramer_v": 0.03},
-        "payment_method": {"psi": 0.06, "missing_rate": 0.02, "unseen_category_rate": 0.01, "cramer_v": 0.05},
-        "acquisition_source": {"psi": 0.03, "missing_rate": 0.01, "unseen_category_rate": 0.02, "cramer_v": 0.04},
+        "country": {
+            "unseen_category_rate": 0.06,
+            "cardinality_ratio": 0.35,
+            "chi2": 0.03,
+        },
+        "device_type": {
+            "psi": 0.03,
+            "missing_rate": 0.01,
+            "unseen_category_rate": 0.01,
+            "chi2": 0.005,
+            "cramer_v": 0.04,
+        },
+        "channel": {
+            "psi": 0.04,
+            "missing_rate": 0.01,
+            "unseen_category_rate": 0.02,
+            "cramer_v": 0.03,
+        },
+        "region": {
+            "psi": 0.06,
+            "missing_rate": 0.02,
+            "unseen_category_rate": 0.01,
+            "cramer_v": 0.05,
+        },
+        "product": {
+            "psi": 0.03,
+            "missing_rate": 0.00,
+            "unseen_category_rate": 0.02,
+            "cardinality_ratio": 0.65,
+            "cramer_v": 0.04,
+        },
+        "customer_segment": {
+            "psi": 0.07,
+            "missing_rate": 0.01,
+            "unseen_category_rate": 0.03,
+            "cramer_v": 0.06,
+        },
+        "plan_type": {
+            "psi": 0.05,
+            "missing_rate": 0.02,
+            "unseen_category_rate": 0.01,
+            "cramer_v": 0.04,
+        },
+        "browser": {
+            "psi": 0.04,
+            "missing_rate": 0.01,
+            "unseen_category_rate": 0.02,
+            "cramer_v": 0.03,
+        },
+        "payment_method": {
+            "psi": 0.06,
+            "missing_rate": 0.02,
+            "unseen_category_rate": 0.01,
+            "cramer_v": 0.05,
+        },
+        "acquisition_source": {
+            "psi": 0.03,
+            "missing_rate": 0.01,
+            "unseen_category_rate": 0.02,
+            "cramer_v": 0.04,
+        },
     }
     features = {
         **{
@@ -299,31 +560,22 @@ def set_critical_scenario() -> None:
         "kstest": 0.08,
     })
 
-    all_features = (*features.values(), prediction)
-
-    # отключить предикт
-    # prediction = None
-    # all_features = tuple(features.values())
-
-
+    # Core считает overall status и active alerts по feature-блоку.
+    # Prediction экспортируется отдельно и не повышает общий status.
     alert_count = sum(
-        result["status"] != "ok"
-        for feature in all_features
-        for result in feature["metrics"].values()
+        feature["status"] == "critical"
+        for feature in features.values()
     )
     overall_severity = max(
         SEVERITY_TO_CODE[feature["status"]]
-        for feature in all_features
+        for feature in features.values()
     )
     code_to_status = {
         code: status for status, code in SEVERITY_TO_CODE.items()
     }
+    report_time = datetime.now(timezone.utc)
     report = {
-        "timestamp": (
-            datetime.now(timezone.utc)
-            .isoformat()
-            .replace("+00:00", "Z")
-        ),
+        "timestamp": report_time.isoformat().replace("+00:00", "Z"),
         "window_size": WINDOW_SIZE,
         "overall_status": code_to_status[overall_severity],
         "active_alerts": alert_count,
@@ -332,6 +584,7 @@ def set_critical_scenario() -> None:
         "prediction": prediction,
     }
     export_to_prometheus(report)
+    export_adversarial_validation(report_time)
 
 
 FEATURE_LABELS = (
@@ -373,6 +626,18 @@ def set_insufficient_data() -> None:
     metric_value.clear()
     metric_status.clear()
     feature_status.clear()
+    av_status.set(-1)
+    av_available.set(0)
+    av_roc_auc.set(-1)
+    av_timestamp_seconds.set(-1)
+    av_last_run_timestamp_seconds.set(-1)
+    av_dataset_size.set(0)
+    av_reference_rows.set(0)
+    av_current_rows.set(0)
+    av_features_evaluated.set(0)
+    av_sample_fraction.clear()
+    av_threshold.clear()
+    av_feature_importance.clear()
 
     for feature, feature_type in FEATURE_LABELS:
         labels = {"feature": feature, "type": feature_type}

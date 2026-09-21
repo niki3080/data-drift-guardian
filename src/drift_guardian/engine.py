@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-
 MOCK_REPORT_PATH = (
     Path(__file__).parents[2] / "reports" / "mock_drift_report.json"
 )

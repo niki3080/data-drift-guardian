@@ -38,8 +38,8 @@ def adversarial_validation(
     из них, но не более `max_samples` строк.
 
     Схема признаков берется из `reference`. Числовые пропущенные значения
-    сохраняются как NaN для нативной обработки алгоритмом LightGBM. 
-    Столбцы типов object, string, category и boolean обрабатываются как 
+    сохраняются как NaN для нативной обработки алгоритмом LightGBM.
+    Столбцы типов object, string, category и boolean обрабатываются как
     категориальные, их пропущенные значения обозначаются как `missing_category`.
 
     Args:
@@ -110,6 +110,7 @@ def adversarial_validation(
     )
     oof_probabilities = np.zeros(len(features), dtype=float)
     fold_importances: list[np.ndarray] = []
+    fold_roc_auc_scores: list[float] = []
 
     # Настройка параметров LightGBM с возможностью переопределения пользователем
     default_model_params = {
@@ -151,10 +152,12 @@ def adversarial_validation(
             ],
         )
 
-        oof_probabilities[validation_indices] = model.predict_proba(
+        fold_probabilities = model.predict_proba(
             X_val,
             num_iteration=model.best_iteration_,
         )[:, 1]
+        oof_probabilities[validation_indices] = fold_probabilities
+        fold_roc_auc_scores.append(float(roc_auc_score(y_val, fold_probabilities)))
 
         # Сбор feature importances по фолдам
         gain = model.booster_.feature_importance(importance_type="gain")
@@ -181,8 +184,47 @@ def adversarial_validation(
         kind="stable",
     ).reset_index(drop=True)
     feature_importance["rank"] = np.arange(1, len(feature_importance) + 1)
+    # Не меняем публичную сигнатуру AV: диагностические CV-метрики храним
+    # в attrs возвращаемого DataFrame и читаем их в realtime adapter.
+    fold_auc = np.asarray(fold_roc_auc_scores, dtype=float)
+    feature_importance.attrs["roc_auc_cv_mean"] = float(fold_auc.mean())
+    feature_importance.attrs["roc_auc_cv_std"] = float(fold_auc.std())
+    feature_importance.attrs["roc_auc_cv_min"] = float(fold_auc.min())
+    feature_importance.attrs["roc_auc_cv_max"] = float(fold_auc.max())
+    feature_importance.attrs["driver_consistency"] = _mean_pairwise_cosine(
+        importance_values
+    )
 
     return roc_auc, feature_importance
+
+
+def _mean_pairwise_cosine(vectors: np.ndarray) -> float:
+    """Средняя согласованность feature importance между CV-фолдами.
+
+    Для каждой пары фолдов считается cosine similarity нормализованных gain-векторов.
+    Значение 1 означает полностью согласованный набор драйверов, 0 — отсутствие
+    общего направления. Два нулевых вектора считаются согласованными.
+    """
+    if len(vectors) < 2:
+        return 1.0
+
+    similarities: list[float] = []
+    for left_idx in range(len(vectors) - 1):
+        left = np.asarray(vectors[left_idx], dtype=float)
+        for right_idx in range(left_idx + 1, len(vectors)):
+            right = np.asarray(vectors[right_idx], dtype=float)
+            left_norm = float(np.linalg.norm(left))
+            right_norm = float(np.linalg.norm(right))
+            if left_norm == 0.0 and right_norm == 0.0:
+                similarities.append(1.0)
+            elif left_norm == 0.0 or right_norm == 0.0:
+                similarities.append(0.0)
+            else:
+                similarities.append(
+                    float(np.dot(left, right) / (left_norm * right_norm))
+                )
+
+    return float(np.mean(similarities))
 
 
 def _validate_inputs(

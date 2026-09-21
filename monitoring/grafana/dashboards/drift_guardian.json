@@ -7184,6 +7184,8 @@
         "spec": {
           "id": 75,
           "title": "Prediction⠀·⠀Metric Values",
+<<<<<<< HEAD
+=======
           "description": "",
           "links": [],
           "data": {
@@ -7203,6 +7205,8 @@
                       "spec": {
                         "editorMode": "code",
                         "expr": "drift_metric_value{feature=\"prediction\"}",
+                        "format": "time_series",
+                        "instant": false,
                         "legendFormat": "{{metric}}",
                         "range": true
                       }
@@ -7320,7 +7324,9 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "drift_metric_value{\n  feature!=\"prediction\",\n  feature=~\"${history_feature:regex}\",\n  metric=~\"${history_metric:regex}\"\n}",
+                        "expr": "drift_metric_value{\n  feature!=\"prediction\",\n  feature=~\"$history_feature\",\n  metric=~\"$history_metric\"\n}",
+                        "format": "time_series",
+                        "instant": false,
                         "legendFormat": "{{metric}}",
                         "range": true
                       }
@@ -7559,7 +7565,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "drift_status{\n  feature!=\"prediction\",\n  feature=~\"${history_feature:regex}\",\n  metric=~\"${history_metric:regex}\"\n}",
+                        "expr": "drift_status{\n  feature!=\"prediction\",\n  feature=~\"$history_feature\",\n  metric=~\"$history_metric\"\n}",
+                        "format": "time_series",
                         "instant": false,
                         "legendFormat": "{{metric}}",
                         "range": true
@@ -8509,6 +8516,2609 @@
                       "spec": {
                         "editorMode": "code",
                         "expr": "drift_status{feature=\"prediction\"}",
+                        "format": "time_series",
+                        "instant": false,
+                        "legendFormat": "{{metric}}",
+                        "range": true
+                      }
+                    },
+                    "refId": "B",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "state-timeline",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "alignValue": "left",
+                "legend": {
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "mergeValues": true,
+                "rowHeight": 0.9,
+                "showValue": "auto",
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "mappings": [
+                    {
+                      "type": "value",
+                      "options": {
+                        "0": {
+                          "text": "OK",
+                          "color": "green",
+                          "index": 0
+                        },
+                        "1": {
+                          "text": "Warning",
+                          "color": "orange",
+                          "index": 1
+                        },
+                        "2": {
+                          "text": "Critical",
+                          "color": "red",
+                          "index": 2
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "fixed"
+                  },
+                  "custom": {
+                    "axisPlacement": "auto",
+                    "fillOpacity": 70,
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": 3600000,
+                    "lineWidth": 1,
+                    "spanNulls": false
+                  },
+                  "fieldMinMax": false
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "js_divergence"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "JS divergence"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "kstest"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "KS test"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "missing_rate"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Missing rate"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "psi"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "PSI"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "wasserstein_distance"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Wassershtein"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "quantile_drift"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Quantile drift"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "cardinality_ratio"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Cardinality ratio"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "category_churn"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Category churn"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "chi2"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "χ²"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "cramer_v"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Cramér’s V"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "unseen_category_rate"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Unseen rate"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "panel-91": {
+        "kind": "Panel",
+        "spec": {
+          "id": 91,
+          "title": "",
+>>>>>>> origin/feature/second-part-realtime-pipeline
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+<<<<<<< HEAD
+                        "editorMode": "code",
+                        "expr": "drift_metric_value{feature=\"prediction\"}",
+                        "legendFormat": "{{metric}}",
+                        "range": true
+=======
+                        "editorMode": "builder",
+                        "expr": "max_over_time(\n  drift_stream_status[$__interval]\n)",
+                        "legendFormat": "__auto",
+                        "range": true
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {
+                "maxDataPoints": 50,
+                "interval": "1m"
+              }
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "status-history",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "colWidth": 0.75,
+                "legend": {
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "rowHeight": 0.04,
+                "showValue": "never",
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "displayName": "Stream Status",
+                  "mappings": [
+                    {
+                      "type": "value",
+                      "options": {
+                        "0": {
+                          "text": "Healthy",
+                          "color": "green",
+                          "index": 1
+                        },
+                        "1": {
+                          "text": "Degraded",
+                          "color": "orange",
+                          "index": 2
+                        },
+                        "2": {
+                          "text": "Unhealthy",
+                          "color": "red",
+                          "index": 3
+                        },
+                        "-1": {
+                          "text": "Not ready",
+                          "color": "#ccccdb4d",
+                          "index": 0
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "custom": {
+                    "axisPlacement": "auto",
+                    "fillOpacity": 70,
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "lineWidth": 1
+                  }
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-92": {
+        "kind": "Panel",
+        "spec": {
+          "id": 92,
+          "title": "",
+          "description": "Latest adversarial-validation status.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_av_status or vector(-999)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "av_status",
+                        "range": false
+                      }
+                    },
+                    "refId": "A - AV status",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_av_status or vector(-1)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "av_status_details",
+                        "range": false
+                      }
+                    },
+                    "refId": "B - AV status details",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "(drift_av_last_run_timestamp_seconds * 1000) or vector(-1)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "av_last_run",
+                        "range": false
+                      }
+                    },
+                    "refId": "C - AV last run",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "canvas",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "inlineEditing": false,
+                "panZoom": false,
+                "root": {
+                  "background": {
+                    "color": {
+                      "field": "av_status",
+                      "fixed": "transparent"
+                    }
+                  },
+                  "border": {
+                    "color": {
+                      "fixed": "red"
+                    },
+                    "radius": 0,
+                    "width": 0
+                  },
+                  "constraint": {
+                    "horizontal": "left",
+                    "vertical": "top"
+                  },
+                  "elements": [
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        },
+                        "image": {
+                          "fixed": ""
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "field": "av_status_details",
+                          "fixed": "#000000"
+                        },
+                        "size": 13,
+                        "text": {
+                          "field": "av_status_details",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "AV status description",
+                      "placement": {
+                        "height": 20,
+                        "left": 15,
+                        "top": 74,
+                        "width": 210
+                      },
+                      "type": "metric-value"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        },
+                        "width": 0
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "#ffffff"
+                        },
+                        "size": 32,
+                        "text": {
+                          "field": "av_status",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "AV status",
+                      "placement": {
+                        "height": 36,
+                        "left": 15,
+                        "rotation": 0,
+                        "top": 32,
+                        "width": 210
+                      },
+                      "type": "metric-value"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        },
+                        "image": {
+                          "fixed": ""
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "field": "av_status_details",
+                          "fixed": "#7b7b7b"
+                        },
+                        "size": 14,
+                        "text": {
+                          "fixed": "⏱"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "AV timestamp label",
+                      "placement": {
+                        "height": 20,
+                        "left": 15,
+                        "rotation": 0,
+                        "top": 6,
+                        "width": 65
+                      },
+                      "type": "text"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "field": "av_status_details",
+                          "fixed": "text"
+                        },
+                        "size": 14,
+                        "text": {
+                          "field": "av_last_run",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "AV timestamp",
+                      "placement": {
+                        "height": 20,
+                        "left": 30,
+                        "rotation": 0,
+                        "top": 6,
+                        "width": 160
+                      },
+                      "type": "metric-value"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "center",
+                        "color": {
+                          "field": "av_status_details",
+                          "fixed": "rgb(204, 204, 220)"
+                        },
+                        "size": 10,
+                        "text": {
+                          "fixed": "____________________________________________________________________________________________"
+                        },
+                        "valign": "middle"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "hr",
+                      "placement": {
+                        "height": 10,
+                        "left": -10,
+                        "rotation": 0,
+                        "top": 20,
+                        "width": 450
+                      },
+                      "type": "text"
+                    }
+                  ],
+                  "name": "Element 1789017050578",
+                  "placement": {
+                    "height": 100,
+                    "left": 0,
+                    "rotation": 0,
+                    "top": 0,
+                    "width": 100
+                  },
+                  "type": "frame"
+                },
+                "showAdvancedTypes": true,
+                "tooltip": {
+                  "disableForOneClick": true,
+                  "mode": "none"
+                },
+                "zoomToContent": false
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "none",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "transparent"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "fixed",
+                    "fixedColor": "transparent"
+                  }
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "av_status_details"
+                    },
+                    "properties": [
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "0": {
+                                "color": "#000000d9",
+                                "index": 1,
+                                "text": "No meaningful shift"
+                              },
+                              "1": {
+                                "color": "#000000d9",
+                                "index": 2,
+                                "text": "Dataset shift detected"
+                              },
+                              "2": {
+                                "color": "#ffffffb3",
+                                "index": 3,
+                                "text": "Strong dataset shift"
+                              },
+                              "-1": {
+                                "color": "#ffffffb3",
+                                "index": 0,
+                                "text": "Waiting for AV"
+                              }
+                            },
+                            "type": "value"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "av_status"
+                    },
+                    "properties": [
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "0": {
+                                "color": "semi-dark-green",
+                                "index": 1,
+                                "text": "OK"
+                              },
+                              "1": {
+                                "color": "semi-dark-orange",
+                                "index": 2,
+                                "text": "WARNING"
+                              },
+                              "2": {
+                                "color": "semi-dark-red",
+                                "index": 3,
+                                "text": "CRITICAL"
+                              },
+                              "-1": {
+                                "color": "#2f2f2f",
+                                "index": 0,
+                                "text": "NOT READY"
+                              },
+                              "-999": {
+                                "color": "#ccccdb1a",
+                                "index": 4,
+                                "text": "No data"
+                              }
+                            },
+                            "type": "value"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "av_last_run"
+                    },
+                    "properties": [
+                      {
+                        "id": "unit",
+                        "value": "time:DD MMM YYYY HH:mm:ss"
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "-1": {
+                                "index": 0,
+                                "text": "AV is not ready"
+                              }
+                            },
+                            "type": "value"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "transparent": true
+        }
+      },
+      "panel-93": {
+        "kind": "Panel",
+        "spec": {
+          "id": 93,
+          "title": "AV · Top drift drivers",
+          "description": "Top-10 features that help the adversarial classifier distinguish current data from reference.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "topk(10, drift_av_feature_importance)",
+                        "format": "table",
+                        "instant": true,
+                        "legendFormat": "{{feature}}",
+                        "range": false
+                      }
+                    },
+                    "refId": "A - AV top features",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [
+                {
+                  "kind": "Transformation",
+                  "group": "organize",
+                  "spec": {
+                    "options": {
+                      "excludeByName": {
+                        "Time": true,
+                        "__name__": true,
+                        "instance": true,
+                        "job": true
+                      },
+                      "includeByName": {},
+                      "indexByName": {
+                        "rank": 0,
+                        "feature": 1,
+                        "Value": 2,
+                        "Value #A - AV top features": 2
+                      },
+                      "renameByName": {
+                        "rank": "#",
+                        "feature": "Feature",
+                        "Value": "Importance",
+                        "Value #A - AV top features": "Importance"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "table",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "cellHeight": "sm",
+                "enablePagination": false,
+                "frameIndex": 0,
+                "frozenColumns": {
+                  "left": 0
+                },
+                "showHeader": true,
+                "sortBy": [
+                  {
+                    "desc": false,
+                    "displayName": "#"
+                  }
+                ]
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "decimals": 3,
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "text"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "fixed",
+                    "fixedColor": "text"
+                  },
+                  "custom": {
+                    "align": "left",
+                    "cellOptions": {
+                      "type": "auto"
+                    },
+                    "filterable": false,
+                    "footer": {
+                      "reducers": []
+                    },
+                    "inspect": false,
+                    "wrapHeaderText": false,
+                    "wrapText": false
+                  }
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "#"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.width",
+                        "value": 45
+                      },
+                      {
+                        "id": "custom.align",
+                        "value": "center"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Feature"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.width",
+                        "value": 220
+                      },
+                      {
+                        "id": "custom.align",
+                        "value": "left"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Importance"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.width",
+                        "value": 120
+                      },
+                      {
+                        "id": "custom.align",
+                        "value": "right"
+                      },
+                      {
+                        "id": "decimals",
+                        "value": 1
+                      },
+                      {
+                        "id": "unit",
+                        "value": "percentunit"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "transparent": true
+        }
+      },
+      "panel-94": {
+        "kind": "Panel",
+        "spec": {
+          "id": 94,
+          "title": "",
+          "description": "Adversarial-validation status for each observed Prometheus sample.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "drift_av_status",
+                        "legendFormat": "__auto",
+                        "range": true,
+                        "format": "time_series",
+                        "instant": false
+                      }
+                    },
+                    "refId": "A - AV status history",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {
+                "maxDataPoints": 500,
+                "interval": "1m"
+              }
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "status-history",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "colWidth": 0.75,
+                "legend": {
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "rowHeight": 0.04,
+                "showValue": "never",
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "displayName": "AV Status",
+                  "mappings": [
+                    {
+                      "type": "value",
+                      "options": {
+                        "-1": {
+                          "text": "Not ready",
+                          "color": "#ccccdb4d",
+                          "index": 0
+                        },
+                        "0": {
+                          "text": "Healthy",
+                          "color": "green",
+                          "index": 1
+                        },
+                        "1": {
+                          "text": "Warning",
+                          "color": "orange",
+                          "index": 2
+                        },
+                        "2": {
+                          "text": "Critical",
+                          "color": "red",
+                          "index": 3
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "custom": {
+                    "axisPlacement": "auto",
+                    "fillOpacity": 70,
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "lineWidth": 1
+                  }
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-95": {
+        "kind": "Panel",
+        "spec": {
+          "id": 95,
+          "title": "",
+          "description": "OOF ROC-AUC: dataset separability; 0.5 is near random, higher values indicate stronger drift.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_av_roc_auc or vector(-1)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "av_roc_auc",
+                        "range": false
+>>>>>>> origin/feature/second-part-realtime-pipeline
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+<<<<<<< HEAD
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "limit": 0,
+                  "placement": "bottom",
+                  "showLegend": true
+=======
+                "inlineEditing": false,
+                "panZoom": false,
+                "root": {
+                  "background": {
+                    "color": {
+                      "fixed": "transparent"
+                    }
+                  },
+                  "border": {
+                    "color": {
+                      "fixed": "red"
+                    },
+                    "radius": 2,
+                    "width": 0
+                  },
+                  "constraint": {
+                    "horizontal": "left",
+                    "vertical": "top"
+                  },
+                  "elements": [
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        },
+                        "image": {
+                          "fixed": ""
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "center",
+                        "color": {
+                          "fixed": "text"
+                        },
+                        "size": 31,
+                        "text": {
+                          "field": "av_roc_auc",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "av_roc_auc",
+                      "placement": {
+                        "height": 43,
+                        "left": 0,
+                        "rotation": 0,
+                        "top": 22,
+                        "width": 120
+                      },
+                      "type": "metric-value"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "center",
+                        "color": {
+                          "fixed": "#ccccdb80"
+                        },
+                        "size": 13,
+                        "text": {
+                          "fixed": "ROC-AUC"
+                        },
+                        "valign": "top"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "ROC-AUC",
+                      "placement": {
+                        "height": 20,
+                        "left": 0,
+                        "rotation": 0,
+                        "top": 0,
+                        "width": 130
+                      },
+                      "type": "text"
+                    }
+                  ],
+                  "name": "Element 1789017050578",
+                  "placement": {
+                    "height": 100,
+                    "left": 0,
+                    "rotation": 0,
+                    "top": 0,
+                    "width": 100
+                  },
+                  "type": "frame"
+>>>>>>> origin/feature/second-part-realtime-pipeline
+                },
+                "tooltip": {
+<<<<<<< HEAD
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "decimals": 2,
+=======
+                  "disableForOneClick": false,
+                  "mode": "none"
+                },
+                "zoomToContent": false
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "none",
+>>>>>>> origin/feature/second-part-realtime-pipeline
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+<<<<<<< HEAD
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "palette-classic",
+                    "seriesBy": "max"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.9,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "linear",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 1,
+                    "pointSize": 1,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "always",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "fieldMinMax": false
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-76": {
+        "kind": "Panel",
+        "spec": {
+          "id": 76,
+          "title": "$history_feature⠀·⠀Metric Values",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "drift_metric_value{\n  feature!=\"prediction\",\n  feature=~\"${history_feature:regex}\",\n  metric=~\"${history_metric:regex}\"\n}",
+                        "legendFormat": "{{metric}}",
+                        "range": true
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": true,
+                  "overflow": "ellipsis",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "timezone": [
+                  "browser"
+                ],
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "decimals": 2,
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisGridShow": true,
+                    "axisLabel": "",
+                    "axisPlacement": "left",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 1,
+                    "pointSize": 3,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "never",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "fieldMinMax": false
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "js_divergence"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "JS divergence"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "cardinality_ratio"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Cardinality ratio"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "category_churn"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Category churn"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "chi2"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "χ²"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "cramer_v"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Cramér’s V"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "missing_rate"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Missing rate"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "psi"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "PSI"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "quantile_drift"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Quantile drift"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "unseen_category_rate"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Unseen rate"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "panel-77": {
+        "kind": "Panel",
+        "spec": {
+          "id": 77,
+          "title": "$history_feature⠀·⠀Metric Status History",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "drift_status{\n  feature!=\"prediction\",\n  feature=~\"${history_feature:regex}\",\n  metric=~\"${history_metric:regex}\"\n}",
+                        "instant": false,
+                        "legendFormat": "{{metric}}",
+                        "range": true
+                      }
+                    },
+                    "refId": "B",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "state-timeline",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "alignValue": "left",
+                "legend": {
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "mergeValues": true,
+                "rowHeight": 0.9,
+                "showValue": "auto",
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "mappings": [
+                    {
+                      "type": "value",
+                      "options": {
+                        "0": {
+                          "text": "OK",
+                          "color": "green",
+                          "index": 0
+                        },
+                        "1": {
+                          "text": "Warning",
+                          "color": "orange",
+                          "index": 1
+                        },
+                        "2": {
+                          "text": "Critical",
+                          "color": "red",
+                          "index": 2
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "fixed"
+                  },
+                  "custom": {
+                    "axisPlacement": "auto",
+                    "fillOpacity": 70,
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": 3600000,
+                    "lineWidth": 1,
+                    "spanNulls": false
+                  },
+                  "fieldMinMax": false
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "js_divergence"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "JS divergence"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "kstest"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "KS test"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "missing_rate"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Missing rate"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "psi"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "PSI"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "wasserstein_distance"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Wassershtein"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "quantile_drift"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Quantile drift"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "cardinality_ratio"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Cardinality ratio"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "category_churn"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Category churn"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "chi2"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "χ²"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "cramer_v"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Cramér’s V"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "unseen_category_rate"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Unseen rate"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "panel-86": {
+        "kind": "Panel",
+        "spec": {
+          "id": 86,
+          "title": "$type features",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "(\n  (\n    # Значения метрик\n    drift_metric_value{feature!=\"prediction\"}\n\n    or\n\n    # Статусы отдельных метрик\n    label_replace(\n      drift_status{feature!=\"prediction\"},\n      \"metric\", \"${1}_status\", \"metric\", \"(.+)\"\n    )\n\n    or\n\n    # Общий feature status\n    label_replace(\n      drift_status_feature{feature!=\"prediction\"},\n      \"metric\", \"___Status\", \"feature\", \".+\"\n    )\n  )\n\n  # Фильтр всех полученных данных по статусу фичи\n  and on(feature)\n  (\n    drift_status_feature{feature!=\"prediction\"}\n    ${analysis_status_filter:raw}\n  )\n)\n\n# Fallback\nor on()\nlabel_replace(\n  label_replace(\n    vector(-1),\n    \"feature\", \"Collecting data\", \"\", \"\"\n  ),\n  \"metric\", \"Loading\", \"\", \"\"\n)",
+                        "format": "table",
+                        "instant": true,
+                        "legendFormat": "__auto",
+                        "range": false
+                      }
+                    },
+                    "refId": "A - data load",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "group by (feature, type) (\n  drift_status_feature{feature!=\"prediction\"}\n  ${analysis_status_filter:raw}\n)",
+                        "format": "table",
+                        "instant": true,
+                        "legendFormat": "__auto",
+                        "range": false
+                      }
+                    },
+                    "refId": "B - feature type",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [
+                {
+                  "kind": "Transformation",
+                  "group": "organize",
+                  "spec": {
+                    "filter": {
+                      "id": "byRefId",
+                      "options": "/^(?:A - data load)$/"
+                    },
+                    "options": {
+                      "excludeByName": {
+                        "Time": true,
+                        "__name__": true,
+                        "instance": true,
+                        "job": true,
+                        "type": false
+                      },
+                      "includeByName": {},
+                      "indexByName": {},
+                      "renameByName": {
+                        "Value #A - data load": "Metric value"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "filterByValue",
+                  "spec": {
+                    "filter": {
+                      "id": "byRefId",
+                      "options": "/^(?:A - data load)$/"
+                    },
+                    "options": {
+                      "filters": [
+                        {
+                          "config": {
+                            "id": "equal",
+                            "options": {
+                              "value": "$type"
+                            }
+                          },
+                          "fieldName": "type"
+                        }
+                      ],
+                      "match": "any",
+                      "type": "include"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "groupingToMatrix",
+                  "spec": {
+                    "filter": {
+                      "id": "byRefId",
+                      "options": "/^(?:A - data load)$/"
+                    },
+                    "options": {
+                      "columnField": "feature",
+                      "rowField": "metric",
+                      "valueField": "Metric value"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "sortBy",
+                  "spec": {
+                    "options": {
+                      "fields": {},
+                      "sort": [
+                        {
+                          "field": "metric\\feature"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "transpose",
+                  "spec": {
+                    "filter": {
+                      "id": "byRefId",
+                      "options": "/^(?:)$/"
+                    },
+                    "options": {
+                      "firstFieldName": ""
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "organize",
+                  "spec": {
+                    "filter": {
+                      "id": "byRefId",
+                      "options": "/^(?:transpose-undefined)$/"
+                    },
+                    "options": {
+                      "excludeByName": {
+                        "Time": true,
+                        "Value #B - feature type": true
+                      },
+                      "includeByName": {},
+                      "indexByName": {},
+                      "renameByName": {
+                        "feature": "Field",
+                        "type": "type"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "organize",
+                  "spec": {
+                    "filter": {
+                      "id": "byRefId",
+                      "options": "/^(?:B - feature type)$/"
+                    },
+                    "options": {
+                      "excludeByName": {
+                        "Time": true,
+                        "Value #B - feature type": true
+                      },
+                      "includeByName": {},
+                      "indexByName": {},
+                      "renameByName": {
+                        "feature": "Field",
+                        "type": ""
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "joinByField",
+                  "spec": {
+                    "filter": {
+                      "id": "byRefId",
+                      "options": "/^(?:B - feature type|transpose-undefined)$/"
+                    },
+                    "options": {
+                      "byField": "Field",
+                      "mode": "inner"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "organize",
+                  "spec": {
+                    "options": {
+                      "excludeByName": {},
+                      "includeByName": {},
+                      "indexByName": {
+                        "Field": 1,
+                        "___Status": 0,
+                        "cardinality_ratio": 5,
+                        "cardinality_ratio_status": 6,
+                        "category_churn": 11,
+                        "category_churn_status": 12,
+                        "chi2": 13,
+                        "chi2_status": 14,
+                        "cramer_v": 15,
+                        "cramer_v_status": 16,
+                        "js_divergence": 17,
+                        "js_divergence_status": 18,
+                        "kstest": 19,
+                        "kstest_status": 20,
+                        "missing_rate": 7,
+                        "missing_rate_status": 8,
+                        "psi": 3,
+                        "psi_status": 4,
+                        "quantile_drift": 21,
+                        "quantile_drift_status": 22,
+                        "type": 2,
+                        "unseen_category_rate": 9,
+                        "unseen_category_rate_status": 10,
+                        "wasserstein_distance": 23,
+                        "wasserstein_distance_status": 24
+                      },
+                      "renameByName": {
+                        "Field": "Feature",
+                        "_Status": "Status",
+                        "_Type": "Type",
+                        "cardinality_ratio": "Card. ratio",
+                        "category_churn": "Cat. churn",
+                        "chi2": "χ²",
+                        "cramer_v": "Cramér’s V",
+                        "js_divergence": "JS div.",
+                        "kstest": "KS test",
+                        "missing_rate": "Missing",
+                        "psi": "PSI",
+                        "quantile_drift": "Quantile Δ",
+                        "quantile_drift_status": "",
+                        "type": "Type",
+                        "unseen_category_rate": "Unseen",
+                        "wasserstein_distance": "Wasserstein"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "renameByRegex",
+                  "spec": {
+                    "options": {
+                      "regex": "(.*_status.*)",
+                      "renamePattern": "⠀⠀⠀⠀⠀$1"
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "table",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "cellHeight": "sm",
+                "enablePagination": true,
+                "frameIndex": 0,
+                "showHeader": true,
+                "sortBy": [
+                  {
+                    "desc": false,
+                    "displayName": "Status"
+                  }
+                ]
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "decimals": 2,
+                  "mappings": [
+                    {
+                      "type": "special",
+                      "options": {
+                        "match": "empty",
+                        "result": {
+                          "text": "–",
+                          "color": "#ccccdb26",
+                          "index": 0
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "text"
+=======
+                        "color": "transparent"
+>>>>>>> origin/feature/second-part-realtime-pipeline
+                      }
+                    ]
+                  },
+                  "color": {
+<<<<<<< HEAD
+                    "mode": "thresholds"
+                  },
+                  "custom": {
+                    "align": "right",
+                    "cellOptions": {
+                      "type": "auto"
+                    },
+                    "filterable": false,
+                    "footer": {
+                      "reducers": []
+                    },
+                    "inspect": false,
+                    "width": 50,
+                    "wrapText": true
+                  }
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "___Status"
+                    },
+                    "properties": [
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "0": {
+                                "color": "green",
+                                "index": 0,
+                                "text": "●"
+                              },
+                              "1": {
+                                "color": "#FF9830",
+                                "index": 1,
+                                "text": "●"
+                              },
+                              "2": {
+                                "color": "red",
+                                "index": 2,
+                                "text": "●"
+                              },
+                              "-1": {
+                                "color": "#ccccdb66",
+                                "index": 3,
+                                "text": "–"
+                              }
+                            },
+                            "type": "value"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "custom.cellOptions",
+                        "value": {
+                          "type": "color-text"
+                        }
+                      },
+                      {
+                        "id": "custom.align",
+                        "value": "center"
+                      },
+                      {
+                        "id": "custom.width",
+                        "value": 20
+                      },
+                      {
+                        "id": "displayName",
+                        "value": "⚠"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Feature"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.width",
+                        "value": 150
+                      },
+                      {
+                        "id": "custom.filterable",
+                        "value": true
+                      },
+                      {
+                        "id": "filterable"
+                      },
+                      {
+                        "id": "custom.align",
+                        "value": "left"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Type"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.width",
+                        "value": 20
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "1": {
+                                "color": "#ccccdbb3",
+                                "index": 0,
+                                "text": "num"
+                              },
+                              "2": {
+                                "color": "#ccccdbb3",
+                                "index": 1,
+                                "text": "cat"
+                              }
+                            },
+                            "type": "value"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "custom.align",
+                        "value": "center"
+                      },
+                      {
+                        "id": "custom.cellOptions",
+                        "value": {
+                          "type": "color-text"
+                        }
+                      },
+                      {
+                        "id": "custom.filterable",
+                        "value": true
+                      },
+                      {
+                        "id": "custom.width",
+                        "value": 20
+                      },
+                      {
+                        "id": "custom.hideFrom.viz",
+                        "value": true
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Missing"
+                    },
+                    "properties": [
+                      {
+                        "id": "unit",
+                        "value": "percentunit"
+                      },
+                      {
+                        "id": "decimals",
+                        "value": 1
+                      },
+                      {
+                        "id": "custom.width",
+                        "value": 65
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Unseen"
+                    },
+                    "properties": [
+                      {
+                        "id": "unit",
+                        "value": "percentunit"
+                      },
+                      {
+                        "id": "decimals",
+                        "value": 1
+                      },
+                      {
+                        "id": "custom.width",
+                        "value": 60
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Card. ratio"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.width",
+                        "value": 85
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Cramér’s V"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.width",
+                        "value": 90
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "JS div."
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.width",
+                        "value": 60
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Wasserstein"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.width",
+                        "value": 100
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Quantile Δ"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.width",
+                        "value": 85
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "KS test"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.width",
+                        "value": 65
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "χ²"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.width",
+                        "value": 20
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Cat. churn"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.width",
+                        "value": 100
+                      },
+                      {
+                        "id": "decimals",
+                        "value": 1
+                      },
+                      {
+                        "id": "unit",
+                        "value": "percentunit"
+                      },
+                      {
+                        "id": "custom.cellOptions",
+                        "value": {
+                          "type": "color-text"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byRegexp",
+                      "scope": "series",
+                      "options": "/.*status.*/"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.width",
+                        "value": 20
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "0": {
+                                "color": "semi-dark-green",
+                                "index": 0,
+                                "text": "▌"
+                              },
+                              "1": {
+                                "color": "semi-dark-orange",
+                                "index": 1,
+                                "text": "▌"
+                              },
+                              "2": {
+                                "color": "semi-dark-red",
+                                "index": 2,
+                                "text": "▌"
+                              }
+                            },
+                            "type": "value"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "custom.cellOptions",
+                        "value": {
+                          "type": "color-text"
+                        }
+                      },
+                      {
+                        "id": "custom.align",
+                        "value": "left"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "transparent": true
+        }
+      },
+      "panel-90": {
+        "kind": "Panel",
+        "spec": {
+          "id": 90,
+          "title": "Prediction⠀·⠀Metric Status History",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "drift_status{feature=\"prediction\"}",
                         "instant": false,
                         "legendFormat": "{{metric}}",
                         "range": true
@@ -8850,9 +11460,2103 @@
                       "viz": false
                     },
                     "lineWidth": 1
+=======
+                    "mode": "fixed",
+                    "fixedColor": "transparent"
+>>>>>>> origin/feature/second-part-realtime-pipeline
                   }
                 },
-                "overrides": []
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "av_roc_auc"
+                    },
+                    "properties": [
+                      {
+                        "id": "decimals",
+                        "value": 3
+                      },
+                      {
+                        "id": "unit",
+                        "value": "none"
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "type": "value",
+                            "options": {
+                              "-1": {
+                                "index": 0,
+                                "text": "–",
+                                "color": "#ccccdb4d"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "transparent": true
+        }
+      },
+      "panel-96": {
+        "kind": "Panel",
+        "spec": {
+          "id": 96,
+          "title": "",
+          "description": "Standard deviation of ROC-AUC across CV folds. Lower means the drift signal is more stable.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_av_roc_auc_cv_std or vector(-1)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "av_roc_auc_cv_std",
+                        "range": false
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "canvas",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "inlineEditing": false,
+                "panZoom": false,
+                "root": {
+                  "background": {
+                    "color": {
+                      "fixed": "transparent"
+                    }
+                  },
+                  "border": {
+                    "color": {
+                      "fixed": "red"
+                    },
+                    "radius": 2,
+                    "width": 0
+                  },
+                  "constraint": {
+                    "horizontal": "left",
+                    "vertical": "top"
+                  },
+                  "elements": [
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        },
+                        "image": {
+                          "fixed": ""
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "center",
+                        "color": {
+                          "fixed": "text"
+                        },
+                        "size": 31,
+                        "text": {
+                          "field": "av_roc_auc_cv_std",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "av_roc_auc_cv_std",
+                      "placement": {
+                        "height": 43,
+                        "left": 0,
+                        "rotation": 0,
+                        "top": 22,
+                        "width": 120
+                      },
+                      "type": "metric-value"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "center",
+                        "color": {
+                          "fixed": "#ccccdb80"
+                        },
+                        "size": 13,
+                        "text": {
+                          "fixed": "CV std"
+                        },
+                        "valign": "top"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "CV std",
+                      "placement": {
+                        "height": 20,
+                        "left": 0,
+                        "rotation": 0,
+                        "top": 0,
+                        "width": 130
+                      },
+                      "type": "text"
+                    }
+                  ],
+                  "name": "Element 1789017050578",
+                  "placement": {
+                    "height": 100,
+                    "left": 0,
+                    "rotation": 0,
+                    "top": 0,
+                    "width": 100
+                  },
+                  "type": "frame"
+                },
+                "showAdvancedTypes": true,
+                "tooltip": {
+                  "disableForOneClick": false,
+                  "mode": "none"
+                },
+                "zoomToContent": false
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "none",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "transparent"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "fixed",
+                    "fixedColor": "transparent"
+                  }
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "av_roc_auc_cv_std"
+                    },
+                    "properties": [
+                      {
+                        "id": "decimals",
+                        "value": 3
+                      },
+                      {
+                        "id": "unit",
+                        "value": "none"
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "type": "value",
+                            "options": {
+                              "-1": {
+                                "index": 0,
+                                "text": "–",
+                                "color": "#ccccdb4d"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "transparent": true
+        }
+      },
+      "panel-97": {
+        "kind": "Panel",
+        "spec": {
+          "id": 97,
+          "title": "",
+          "description": "Similarity of the current AV feature-importance vector to the previous completed AV run. High values mean drift drivers are stable over time.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_av_driver_similarity_previous or vector(-1)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "av_driver_similarity_previous",
+                        "range": false
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "canvas",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "inlineEditing": false,
+                "panZoom": false,
+                "root": {
+                  "background": {
+                    "color": {
+                      "fixed": "transparent"
+                    }
+                  },
+                  "border": {
+                    "color": {
+                      "fixed": "red"
+                    },
+                    "radius": 2,
+                    "width": 0
+                  },
+                  "constraint": {
+                    "horizontal": "left",
+                    "vertical": "top"
+                  },
+                  "elements": [
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        },
+                        "image": {
+                          "fixed": ""
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "center",
+                        "color": {
+                          "fixed": "text"
+                        },
+                        "size": 31,
+                        "text": {
+                          "field": "av_driver_similarity_previous",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "av_driver_similarity_previous",
+                      "placement": {
+                        "height": 43,
+                        "left": 0,
+                        "rotation": 0,
+                        "top": 22,
+                        "width": 150
+                      },
+                      "type": "metric-value"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "center",
+                        "color": {
+                          "fixed": "#ccccdb80"
+                        },
+                        "size": 13,
+                        "text": {
+                          "fixed": "Prev-window sim."
+                        },
+                        "valign": "top"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "Drivers vs prev",
+                      "placement": {
+                        "height": 20,
+                        "left": 0,
+                        "rotation": 0,
+                        "top": 0,
+                        "width": 150
+                      },
+                      "type": "text"
+                    }
+                  ],
+                  "name": "Element 1789017050578",
+                  "placement": {
+                    "height": 100,
+                    "left": 0,
+                    "rotation": 0,
+                    "top": 0,
+                    "width": 100
+                  },
+                  "type": "frame"
+                },
+                "showAdvancedTypes": true,
+                "tooltip": {
+                  "disableForOneClick": false,
+                  "mode": "none"
+                },
+                "zoomToContent": false
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "none",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "transparent"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "fixed",
+                    "fixedColor": "transparent"
+                  }
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "av_driver_similarity_previous"
+                    },
+                    "properties": [
+                      {
+                        "id": "decimals",
+                        "value": 1
+                      },
+                      {
+                        "id": "unit",
+                        "value": "percentunit"
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "type": "value",
+                            "options": {
+                              "-1": {
+                                "index": 0,
+                                "text": "–",
+                                "color": "#ccccdb4d"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "transparent": true
+        }
+      },
+      "panel-98": {
+        "kind": "Panel",
+        "spec": {
+          "id": 98,
+          "title": "",
+          "description": "Lowest ROC-AUC across CV folds; a conservative view of dataset separability.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_av_roc_auc_cv_min or vector(-1)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "av_roc_auc_cv_min",
+                        "range": false
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "canvas",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "inlineEditing": false,
+                "panZoom": false,
+                "root": {
+                  "background": {
+                    "color": {
+                      "fixed": "transparent"
+                    }
+                  },
+                  "border": {
+                    "color": {
+                      "fixed": "red"
+                    },
+                    "radius": 2,
+                    "width": 0
+                  },
+                  "constraint": {
+                    "horizontal": "left",
+                    "vertical": "top"
+                  },
+                  "elements": [
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        },
+                        "image": {
+                          "fixed": ""
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "center",
+                        "color": {
+                          "fixed": "text"
+                        },
+                        "size": 31,
+                        "text": {
+                          "field": "av_roc_auc_cv_min",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "av_roc_auc_cv_min",
+                      "placement": {
+                        "height": 43,
+                        "left": 0,
+                        "rotation": 0,
+                        "top": 22,
+                        "width": 120
+                      },
+                      "type": "metric-value"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "center",
+                        "color": {
+                          "fixed": "#ccccdb80"
+                        },
+                        "size": 13,
+                        "text": {
+                          "fixed": "Worst-fold AUC"
+                        },
+                        "valign": "top"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "Worst-fold AUC",
+                      "placement": {
+                        "height": 20,
+                        "left": 0,
+                        "rotation": 0,
+                        "top": 0,
+                        "width": 130
+                      },
+                      "type": "text"
+                    }
+                  ],
+                  "name": "Element 1789017050578",
+                  "placement": {
+                    "height": 100,
+                    "left": 0,
+                    "rotation": 0,
+                    "top": 0,
+                    "width": 100
+                  },
+                  "type": "frame"
+                },
+                "showAdvancedTypes": true,
+                "tooltip": {
+                  "disableForOneClick": false,
+                  "mode": "none"
+                },
+                "zoomToContent": false
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "none",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "transparent"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "fixed",
+                    "fixedColor": "transparent"
+                  }
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "av_roc_auc_cv_min"
+                    },
+                    "properties": [
+                      {
+                        "id": "decimals",
+                        "value": 3
+                      },
+                      {
+                        "id": "unit",
+                        "value": "none"
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "type": "value",
+                            "options": {
+                              "-1": {
+                                "index": 0,
+                                "text": "–",
+                                "color": "#ccccdb4d"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "transparent": true
+        }
+      },
+      "panel-99": {
+        "kind": "Panel",
+        "spec": {
+          "id": 99,
+          "title": "",
+          "description": "Average cosine similarity of feature-importance vectors across CV folds. Higher means the identified drift drivers are more reproducible.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_av_driver_consistency or vector(-1)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "av_driver_consistency",
+                        "range": false
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "canvas",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "inlineEditing": false,
+                "panZoom": false,
+                "root": {
+                  "background": {
+                    "color": {
+                      "fixed": "transparent"
+                    }
+                  },
+                  "border": {
+                    "color": {
+                      "fixed": "red"
+                    },
+                    "radius": 2,
+                    "width": 0
+                  },
+                  "constraint": {
+                    "horizontal": "left",
+                    "vertical": "top"
+                  },
+                  "elements": [
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        },
+                        "image": {
+                          "fixed": ""
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "center",
+                        "color": {
+                          "fixed": "text"
+                        },
+                        "size": 31,
+                        "text": {
+                          "field": "av_driver_consistency",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "av_driver_consistency",
+                      "placement": {
+                        "height": 43,
+                        "left": 0,
+                        "rotation": 0,
+                        "top": 22,
+                        "width": 170
+                      },
+                      "type": "metric-value"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "center",
+                        "color": {
+                          "fixed": "#ccccdb80"
+                        },
+                        "size": 13,
+                        "text": {
+                          "fixed": "Driver consistency"
+                        },
+                        "valign": "top"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "CV driver stability",
+                      "placement": {
+                        "height": 20,
+                        "left": 0,
+                        "rotation": 0,
+                        "top": 0,
+                        "width": 170
+                      },
+                      "type": "text"
+                    }
+                  ],
+                  "name": "Element 1789017050578",
+                  "placement": {
+                    "height": 100,
+                    "left": 0,
+                    "rotation": 0,
+                    "top": 0,
+                    "width": 100
+                  },
+                  "type": "frame"
+                },
+                "showAdvancedTypes": true,
+                "tooltip": {
+                  "disableForOneClick": false,
+                  "mode": "none"
+                },
+                "zoomToContent": false
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "none",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "transparent"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "fixed",
+                    "fixedColor": "transparent"
+                  }
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "av_driver_consistency"
+                    },
+                    "properties": [
+                      {
+                        "id": "decimals",
+                        "value": 1
+                      },
+                      {
+                        "id": "unit",
+                        "value": "percentunit"
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "type": "value",
+                            "options": {
+                              "-1": {
+                                "index": 0,
+                                "text": "–",
+                                "color": "#ccccdb4d"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "transparent": true
+        }
+      },
+      "panel-100": {
+        "kind": "Panel",
+        "spec": {
+          "id": 100,
+          "title": "AV · Run diagnostics",
+          "description": "Technical context for the latest AV run: dataset sizes, sampling coverage, feature count, and active AV thresholds.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_av_reference_rows or vector(-1)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "av_reference_rows",
+                        "range": false
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_av_current_rows or vector(-1)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "av_current_rows",
+                        "range": false
+                      }
+                    },
+                    "refId": "B",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_av_dataset_size or vector(-1)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "av_dataset_size",
+                        "range": false
+                      }
+                    },
+                    "refId": "C",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_av_features_evaluated or vector(-1)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "av_features_evaluated",
+                        "range": false
+                      }
+                    },
+                    "refId": "D",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_av_sample_fraction{dataset=\"reference\"} or vector(-1)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "av_reference_fraction",
+                        "range": false
+                      }
+                    },
+                    "refId": "E",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_av_sample_fraction{dataset=\"current\"} or vector(-1)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "av_current_fraction",
+                        "range": false
+                      }
+                    },
+                    "refId": "F",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_av_threshold{level=\"warning\"} or vector(-1)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "av_warning_threshold",
+                        "range": false
+                      }
+                    },
+                    "refId": "G",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_av_threshold{level=\"critical\"} or vector(-1)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "av_critical_threshold",
+                        "range": false
+                      }
+                    },
+                    "refId": "H",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "canvas",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "inlineEditing": false,
+                "panZoom": false,
+                "root": {
+                  "background": {
+                    "color": {
+                      "fixed": "transparent"
+                    }
+                  },
+                  "border": {
+                    "color": {
+                      "fixed": "red"
+                    },
+                    "radius": 2,
+                    "width": 0
+                  },
+                  "constraint": {
+                    "horizontal": "left",
+                    "vertical": "top"
+                  },
+                  "elements": [
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "#ccccdb80"
+                        },
+                        "size": 13,
+                        "text": {
+                          "fixed": "Reference rows"
+                        },
+                        "valign": "top"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "Reference rows",
+                      "placement": {
+                        "height": 18,
+                        "left": 20,
+                        "rotation": 0,
+                        "top": 20,
+                        "width": 180
+                      },
+                      "type": "text"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        },
+                        "image": {
+                          "fixed": ""
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "text"
+                        },
+                        "size": 24,
+                        "text": {
+                          "field": "av_reference_rows",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "av_reference_rows",
+                      "placement": {
+                        "height": 34,
+                        "left": 20,
+                        "rotation": 0,
+                        "top": 40,
+                        "width": 200
+                      },
+                      "type": "metric-value"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "#ccccdb80"
+                        },
+                        "size": 13,
+                        "text": {
+                          "fixed": "Current rows"
+                        },
+                        "valign": "top"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "Current rows",
+                      "placement": {
+                        "height": 18,
+                        "left": 280,
+                        "rotation": 0,
+                        "top": 20,
+                        "width": 180
+                      },
+                      "type": "text"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        },
+                        "image": {
+                          "fixed": ""
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "text"
+                        },
+                        "size": 24,
+                        "text": {
+                          "field": "av_current_rows",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "av_current_rows",
+                      "placement": {
+                        "height": 34,
+                        "left": 280,
+                        "rotation": 0,
+                        "top": 40,
+                        "width": 200
+                      },
+                      "type": "metric-value"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "#ccccdb80"
+                        },
+                        "size": 13,
+                        "text": {
+                          "fixed": "AV sample / class"
+                        },
+                        "valign": "top"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "AV sample / class",
+                      "placement": {
+                        "height": 18,
+                        "left": 20,
+                        "rotation": 0,
+                        "top": 82,
+                        "width": 180
+                      },
+                      "type": "text"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        },
+                        "image": {
+                          "fixed": ""
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "text"
+                        },
+                        "size": 24,
+                        "text": {
+                          "field": "av_dataset_size",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "av_dataset_size",
+                      "placement": {
+                        "height": 34,
+                        "left": 20,
+                        "rotation": 0,
+                        "top": 102,
+                        "width": 200
+                      },
+                      "type": "metric-value"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "#ccccdb80"
+                        },
+                        "size": 13,
+                        "text": {
+                          "fixed": "Features analyzed"
+                        },
+                        "valign": "top"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "Features analyzed",
+                      "placement": {
+                        "height": 18,
+                        "left": 280,
+                        "rotation": 0,
+                        "top": 82,
+                        "width": 180
+                      },
+                      "type": "text"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        },
+                        "image": {
+                          "fixed": ""
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "text"
+                        },
+                        "size": 24,
+                        "text": {
+                          "field": "av_features_evaluated",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "av_features_evaluated",
+                      "placement": {
+                        "height": 34,
+                        "left": 280,
+                        "rotation": 0,
+                        "top": 102,
+                        "width": 200
+                      },
+                      "type": "metric-value"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "#ccccdb80"
+                        },
+                        "size": 13,
+                        "text": {
+                          "fixed": "Reference coverage"
+                        },
+                        "valign": "top"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "Reference coverage",
+                      "placement": {
+                        "height": 18,
+                        "left": 20,
+                        "rotation": 0,
+                        "top": 144,
+                        "width": 180
+                      },
+                      "type": "text"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        },
+                        "image": {
+                          "fixed": ""
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "text"
+                        },
+                        "size": 24,
+                        "text": {
+                          "field": "av_reference_fraction",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "av_reference_fraction",
+                      "placement": {
+                        "height": 34,
+                        "left": 20,
+                        "rotation": 0,
+                        "top": 164,
+                        "width": 200
+                      },
+                      "type": "metric-value"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "#ccccdb80"
+                        },
+                        "size": 13,
+                        "text": {
+                          "fixed": "Current coverage"
+                        },
+                        "valign": "top"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "Current coverage",
+                      "placement": {
+                        "height": 18,
+                        "left": 280,
+                        "rotation": 0,
+                        "top": 144,
+                        "width": 180
+                      },
+                      "type": "text"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        },
+                        "image": {
+                          "fixed": ""
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "text"
+                        },
+                        "size": 24,
+                        "text": {
+                          "field": "av_current_fraction",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "av_current_fraction",
+                      "placement": {
+                        "height": 34,
+                        "left": 280,
+                        "rotation": 0,
+                        "top": 164,
+                        "width": 200
+                      },
+                      "type": "metric-value"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "#ccccdb80"
+                        },
+                        "size": 13,
+                        "text": {
+                          "fixed": "Warning AUC"
+                        },
+                        "valign": "top"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "Warning AUC",
+                      "placement": {
+                        "height": 18,
+                        "left": 20,
+                        "rotation": 0,
+                        "top": 206,
+                        "width": 180
+                      },
+                      "type": "text"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        },
+                        "image": {
+                          "fixed": ""
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "text"
+                        },
+                        "size": 24,
+                        "text": {
+                          "field": "av_warning_threshold",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "av_warning_threshold",
+                      "placement": {
+                        "height": 34,
+                        "left": 20,
+                        "rotation": 0,
+                        "top": 226,
+                        "width": 200
+                      },
+                      "type": "metric-value"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "#ccccdb80"
+                        },
+                        "size": 13,
+                        "text": {
+                          "fixed": "Critical AUC"
+                        },
+                        "valign": "top"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "Critical AUC",
+                      "placement": {
+                        "height": 18,
+                        "left": 280,
+                        "rotation": 0,
+                        "top": 206,
+                        "width": 180
+                      },
+                      "type": "text"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        },
+                        "image": {
+                          "fixed": ""
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "text"
+                        },
+                        "size": 24,
+                        "text": {
+                          "field": "av_critical_threshold",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "av_critical_threshold",
+                      "placement": {
+                        "height": 34,
+                        "left": 280,
+                        "rotation": 0,
+                        "top": 226,
+                        "width": 200
+                      },
+                      "type": "metric-value"
+                    }
+                  ],
+                  "name": "Element AV diagnostics",
+                  "placement": {
+                    "height": 100,
+                    "left": 0,
+                    "rotation": 0,
+                    "top": 0,
+                    "width": 100
+                  },
+                  "type": "frame"
+                },
+                "showAdvancedTypes": true,
+                "tooltip": {
+                  "disableForOneClick": false,
+                  "mode": "none"
+                },
+                "zoomToContent": false
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "none",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "transparent"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "fixed",
+                    "fixedColor": "transparent"
+                  }
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "av_reference_rows"
+                    },
+                    "properties": [
+                      {
+                        "id": "decimals",
+                        "value": 0
+                      },
+                      {
+                        "id": "unit",
+                        "value": "none"
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "type": "value",
+                            "options": {
+                              "-1": {
+                                "index": 0,
+                                "text": "–",
+                                "color": "#ccccdb4d"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "av_current_rows"
+                    },
+                    "properties": [
+                      {
+                        "id": "decimals",
+                        "value": 0
+                      },
+                      {
+                        "id": "unit",
+                        "value": "none"
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "type": "value",
+                            "options": {
+                              "-1": {
+                                "index": 0,
+                                "text": "–",
+                                "color": "#ccccdb4d"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "av_dataset_size"
+                    },
+                    "properties": [
+                      {
+                        "id": "decimals",
+                        "value": 0
+                      },
+                      {
+                        "id": "unit",
+                        "value": "none"
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "type": "value",
+                            "options": {
+                              "-1": {
+                                "index": 0,
+                                "text": "–",
+                                "color": "#ccccdb4d"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "av_features_evaluated"
+                    },
+                    "properties": [
+                      {
+                        "id": "decimals",
+                        "value": 0
+                      },
+                      {
+                        "id": "unit",
+                        "value": "none"
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "type": "value",
+                            "options": {
+                              "-1": {
+                                "index": 0,
+                                "text": "–",
+                                "color": "#ccccdb4d"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "av_reference_fraction"
+                    },
+                    "properties": [
+                      {
+                        "id": "decimals",
+                        "value": 1
+                      },
+                      {
+                        "id": "unit",
+                        "value": "percentunit"
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "type": "value",
+                            "options": {
+                              "-1": {
+                                "index": 0,
+                                "text": "–",
+                                "color": "#ccccdb4d"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "av_current_fraction"
+                    },
+                    "properties": [
+                      {
+                        "id": "decimals",
+                        "value": 1
+                      },
+                      {
+                        "id": "unit",
+                        "value": "percentunit"
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "type": "value",
+                            "options": {
+                              "-1": {
+                                "index": 0,
+                                "text": "–",
+                                "color": "#ccccdb4d"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "av_warning_threshold"
+                    },
+                    "properties": [
+                      {
+                        "id": "decimals",
+                        "value": 2
+                      },
+                      {
+                        "id": "unit",
+                        "value": "none"
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "type": "value",
+                            "options": {
+                              "-1": {
+                                "index": 0,
+                                "text": "–",
+                                "color": "#ccccdb4d"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "av_critical_threshold"
+                    },
+                    "properties": [
+                      {
+                        "id": "decimals",
+                        "value": 2
+                      },
+                      {
+                        "id": "unit",
+                        "value": "none"
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "type": "value",
+                            "options": {
+                              "-1": {
+                                "index": 0,
+                                "text": "–",
+                                "color": "#ccccdb4d"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
               }
             }
           }
@@ -9388,6 +14092,7 @@
                     "hide": "hideVariable",
                     "skipUrlSync": true
                   }
+<<<<<<< HEAD
                 }
               ]
             }
@@ -9557,8 +14262,388 @@
                     "includeAll": true,
                     "allowCustomValue": true
                   }
+=======
+>>>>>>> origin/feature/second-part-realtime-pipeline
                 }
               ]
+            }
+          },
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "Feature Metrics Over Time",
+              "collapse": false,
+              "hideHeader": false,
+              "layout": {
+                "kind": "RowsLayout",
+                "spec": {
+                  "rows": [
+                    {
+                      "kind": "RowsLayoutRow",
+                      "spec": {
+                        "title": "$history_feature",
+                        "collapse": false,
+                        "repeat": {
+                          "mode": "variable",
+                          "value": "history_feature"
+                        },
+                        "layout": {
+                          "kind": "AutoGridLayout",
+                          "spec": {
+                            "maxColumnCount": 3,
+                            "columnWidthMode": "narrow",
+                            "rowHeightMode": "standard",
+                            "items": [
+                              {
+                                "kind": "AutoGridLayoutItem",
+                                "spec": {
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-76"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "AutoGridLayoutItem",
+                                "spec": {
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-77"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "kind": "RowsLayoutRow",
+                      "spec": {
+                        "title": "--- Divider ---",
+                        "collapse": false,
+                        "hideHeader": true,
+                        "layout": {
+                          "kind": "GridLayout",
+                          "spec": {
+                            "items": []
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              "variables": [
+                {
+                  "kind": "CustomVariable",
+                  "spec": {
+                    "name": "history_status_filter",
+                    "query": "All features : >= 0, Alerted during period : >= 1, Warning only : == 1, Critical during period : == 2",
+                    "current": {
+                      "text": "Critical",
+                      "value": "== 2"
+                    },
+                    "options": [],
+                    "multi": false,
+                    "includeAll": false,
+                    "label": "Status",
+                    "hide": "dontHide",
+                    "skipUrlSync": false,
+                    "allowCustomValue": true,
+                    "valuesFormat": "csv"
+                  }
+                },
+                {
+                  "kind": "QueryVariable",
+                  "spec": {
+                    "name": "history_feature",
+                    "current": {
+                      "text": [
+                        "age"
+                      ],
+                      "value": [
+                        "age"
+                      ]
+                    },
+                    "label": "Feature",
+                    "hide": "dontHide",
+                    "refresh": "onTimeRangeChanged",
+                    "skipUrlSync": false,
+                    "description": "",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "qryType": 5,
+                        "query": "query_result(   max_over_time(     drift_status_feature{       feature!=\"prediction\"     }[$__range]   )   ${history_status_filter:raw} )",
+                        "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                      }
+                    },
+                    "regex": "/feature=\"([^\"]+)\"/",
+                    "regexApplyTo": "value",
+                    "sort": "disabled",
+                    "definition": "query_result(   max_over_time(     drift_status_feature{       feature!=\"prediction\"     }[$__range]   )   ${history_status_filter:raw} )",
+                    "options": [],
+                    "multi": true,
+                    "includeAll": true,
+                    "allowCustomValue": true
+                  }
+                },
+                {
+                  "kind": "QueryVariable",
+                  "spec": {
+                    "name": "history_metric",
+                    "current": {
+                      "text": [
+                        "All"
+                      ],
+                      "value": [
+                        "$__all"
+                      ]
+                    },
+                    "label": "Metric",
+                    "hide": "dontHide",
+                    "refresh": "onDashboardLoad",
+                    "skipUrlSync": false,
+                    "description": "",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "qryType": 1,
+                        "query": "label_values(drift_metric_value{ metric!=\"prediction_psi\"},   metric)",
+                        "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                      }
+                    },
+                    "regex": "",
+                    "regexApplyTo": "value",
+                    "sort": "disabled",
+                    "definition": "label_values(drift_metric_value{ metric!=\"prediction_psi\"},   metric)",
+                    "options": [],
+                    "multi": true,
+                    "includeAll": true,
+                    "allowCustomValue": true,
+                    "allValue": ".*"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "Adversarial Validation",
+              "collapse": false,
+              "hideHeader": false,
+              "conditionalRendering": {
+                "kind": "ConditionalRenderingGroup",
+                "spec": {
+                  "visibility": "show",
+                  "condition": "and",
+                  "items": [
+                    {
+                      "kind": "ConditionalRenderingVariable",
+                      "spec": {
+                        "variable": "av_exists",
+                        "operator": "equals",
+                        "value": "1"
+                      }
+                    }
+                  ]
+                }
+              },
+              "layout": {
+                "kind": "RowsLayout",
+                "spec": {
+                  "rows": [
+                    {
+                      "kind": "RowsLayoutRow",
+                      "spec": {
+                        "title": "Latest AV result",
+                        "collapse": false,
+                        "hideHeader": true,
+                        "layout": {
+                          "kind": "GridLayout",
+                          "spec": {
+                            "items": [
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 5,
+                                  "height": 3,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-92"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 6,
+                                  "y": 0,
+                                  "width": 3,
+                                  "height": 2,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-95"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 9,
+                                  "y": 0,
+                                  "width": 3,
+                                  "height": 2,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-98"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 12,
+                                  "y": 0,
+                                  "width": 3,
+                                  "height": 2,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-96"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 15,
+                                  "y": 0,
+                                  "width": 4,
+                                  "height": 2,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-99"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 19,
+                                  "y": 0,
+                                  "width": 4,
+                                  "height": 2,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-97"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "kind": "RowsLayoutRow",
+                      "spec": {
+                        "title": "Drivers and diagnostics",
+                        "collapse": false,
+                        "hideHeader": true,
+                        "layout": {
+                          "kind": "GridLayout",
+                          "spec": {
+                            "items": [
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 12,
+                                  "height": 12,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-93"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 12,
+                                  "y": 0,
+                                  "width": 12,
+                                  "height": 12,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-100"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "kind": "RowsLayoutRow",
+                      "spec": {
+                        "title": "AV Status Over Time",
+                        "collapse": false,
+                        "hideHeader": false,
+                        "layout": {
+                          "kind": "GridLayout",
+                          "spec": {
+                            "items": [
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 24,
+                                  "height": 4,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-94"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "kind": "RowsLayoutRow",
+                      "spec": {
+                        "title": "--- Divider ---",
+                        "collapse": false,
+                        "hideHeader": true,
+                        "layout": {
+                          "kind": "GridLayout",
+                          "spec": {
+                            "items": []
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
             }
           },
           {
@@ -9889,6 +14974,40 @@
           "regexApplyTo": "value",
           "sort": "disabled",
           "definition": "query_result(clamp_max(  count(drift_status_feature{feature=\"prediction\"}),  1) or vector(0))",
+          "options": [],
+          "multi": false,
+          "includeAll": false,
+          "allowCustomValue": true
+        }
+      },
+      {
+        "kind": "QueryVariable",
+        "spec": {
+          "name": "av_exists",
+          "current": {
+            "text": "0",
+            "value": "0"
+          },
+          "hide": "hideVariable",
+          "refresh": "onTimeRangeChanged",
+          "skipUrlSync": false,
+          "query": {
+            "kind": "DataQuery",
+            "group": "prometheus",
+            "version": "v0",
+            "datasource": {
+              "name": "cfxnbdacrd728d"
+            },
+            "spec": {
+              "qryType": 3,
+              "query": "query_result(clamp_max(max(drift_av_available), 1) or vector(0))",
+              "refId": "PrometheusVariableQueryEditor-VariableQuery"
+            }
+          },
+          "regex": "/^\\{\\}\\s+([01])(?:\\.0)?\\s+/",
+          "regexApplyTo": "value",
+          "sort": "disabled",
+          "definition": "query_result(clamp_max(max(drift_av_available), 1) or vector(0))",
           "options": [],
           "multi": false,
           "includeAll": false,

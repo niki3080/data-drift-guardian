@@ -1,17 +1,28 @@
-# Локальные исходные датасеты
-data
-data/
+# Локальные датасеты
+/data/
 
-# Служебные файлы macOS
-.DS_Store
-
-# Python bytecode
+# Python-окружение и кэши
+.venv/
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
-yulia_notes
-examples
+# Jupyter
+.ipynb_checkpoints/
 
-src/engine.py
+# Локальные переменные окружения
+.env
+.env.*
 
-monitoring/grafana/backup
+# IDE и системные файлы
+.idea/
+.vscode/
+.DS_Store
+
+# Сгенерированные отчёты и резервные копии
+/reports/*.html
+/monitoring/grafana/backup/

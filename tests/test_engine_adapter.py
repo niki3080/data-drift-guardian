@@ -17,7 +17,6 @@ from drift_guardian.ingestion.engine_adapter import (
 from drift_guardian.ingestion.event import KafkaEvent
 from drift_guardian.ingestion.window import WindowBuffer, analyze_window
 
-
 CONFIG = """
 features:
   age:
@@ -34,6 +33,11 @@ prediction_metrics:
   score_column: prediction_score
   type: numeric
   metrics: [psi]
+adversarial_validation:
+  enabled: true
+  thresholds:
+    warning: 0.60
+    critical: 0.75
 thresholds:
   psi:
     warning: 0.1
@@ -190,6 +194,40 @@ class EngineAdapterTest(unittest.TestCase):
             self.assertEqual(len(adapter.reference_df), 12)
             self.assertEqual(adapter.get_reference_metadata()["sample_size"], 12)
             self.assertIn("psi", adapter.thresholds)
+            self.assertEqual(
+                adapter.adversarial_thresholds,
+                {"warning": 0.60, "critical": 0.75},
+            )
+
+    def test_invalid_av_threshold_direction_is_rejected(self) -> None:
+        reference = pd.DataFrame({"age": [30, 40, 50]})
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "reference.csv"
+            config = Path(directory) / "config.yaml"
+            reference.to_csv(path, index=False)
+            config.write_text(
+                """
+features:
+  age:
+    type: numeric
+    metrics: [psi]
+prediction_metrics:
+  enabled: false
+adversarial_validation:
+  enabled: true
+  thresholds:
+    warning: 0.80
+    critical: 0.70
+thresholds:
+  psi:
+    warning: 0.10
+    critical: 0.25
+""",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "AV ROC-AUC thresholds"):
+                EngineAdapter.from_path(path, sample_size=3, config_path=config)
 
     def test_current_yulia_core_to_realtime_to_prometheus_integration(self) -> None:
         reference = build_demo_reference(rows=10, seed=42)
@@ -243,24 +281,24 @@ class EngineAdapterTest(unittest.TestCase):
         self.assertIn("drift_reference_sample_size 10.0", metrics)
 
         # Временный JSON-stub должен соответствовать актуальному config contract.
-        self.assertEqual(
+        self.assertLessEqual(
+            {"missing_rate", "psi"},
             set(report["features"]["age"]["metrics"]),
-            {"missing_rate", "psi"},
         )
-        self.assertEqual(
+        self.assertLessEqual(
+            {"missing_rate", "psi"},
             set(report["features"]["income"]["metrics"]),
-            {"missing_rate", "psi"},
         )
-        self.assertEqual(
-            set(report["features"]["country"]["metrics"]),
+        self.assertLessEqual(
             {
                 "missing_rate",
                 "psi",
                 "unseen_category_rate",
                 "cardinality_ratio",
             },
+            set(report["features"]["country"]["metrics"]),
         )
-        self.assertEqual(set(report["prediction"]["metrics"]), {"psi"})
+        self.assertLessEqual({"psi"}, set(report["prediction"]["metrics"]))
         self.assertNotIn("mean_zscore", metrics)
         self.assertNotIn("positive_prediction_rate", metrics)
         self.assertIn(

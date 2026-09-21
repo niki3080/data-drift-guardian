@@ -17,7 +17,6 @@ from prometheus_client import (
 
 from drift_guardian.ingestion.stream_metrics import StreamSnapshot
 
-
 STATUS_TO_NUMBER = {
     "insufficient_data": -1,
     "ok": 0,
@@ -213,12 +212,134 @@ class PrometheusExporter:
             registry=self.registry,
         )
 
+        self.av_status = Gauge(
+            "drift_av_status",
+            "Adversarial validation status: -1=not configured, 0=ok, 1=warning, 2=critical",
+            registry=self.registry,
+        )
+        self.av_available = Gauge(
+            "drift_av_available",
+            "Whether an adversarial validation result is available: 0=no, 1=yes",
+            registry=self.registry,
+        )
+        self.av_roc_auc = Gauge(
+            "drift_av_roc_auc",
+            "Adversarial validation ROC AUC",
+            registry=self.registry,
+        )
+        self.av_roc_auc_cv_std = Gauge(
+            "drift_av_roc_auc_cv_std",
+            "Standard deviation of fold ROC AUC values in adversarial validation",
+            registry=self.registry,
+        )
+        self.av_roc_auc_cv_mean = Gauge(
+            "drift_av_roc_auc_cv_mean",
+            "Mean ROC AUC across adversarial-validation CV folds",
+            registry=self.registry,
+        )
+        self.av_roc_auc_cv_min = Gauge(
+            "drift_av_roc_auc_cv_min",
+            "Worst ROC AUC across adversarial-validation CV folds",
+            registry=self.registry,
+        )
+        self.av_roc_auc_cv_max = Gauge(
+            "drift_av_roc_auc_cv_max",
+            "Best ROC AUC across adversarial-validation CV folds",
+            registry=self.registry,
+        )
+        self.av_driver_consistency = Gauge(
+            "drift_av_driver_consistency",
+            "Mean pairwise cosine similarity of feature-importance vectors across CV folds",
+            registry=self.registry,
+        )
+        self.av_driver_similarity_previous = Gauge(
+            "drift_av_driver_similarity_previous",
+            "Cosine similarity of AV feature importance to the previous completed AV run",
+            registry=self.registry,
+        )
+        self.av_top1_importance_share = Gauge(
+            "drift_av_top1_importance_share",
+            "Share of total AV feature importance explained by the strongest driver",
+            registry=self.registry,
+        )
+        self.av_top3_importance_share = Gauge(
+            "drift_av_top3_importance_share",
+            "Share of total AV feature importance explained by the top three drivers",
+            registry=self.registry,
+        )
+        self.av_timestamp = Gauge(
+            "drift_av_timestamp_seconds",
+            "Timestamp of the latest adversarial validation run",
+            registry=self.registry,
+        )
+        self.av_last_run_timestamp = Gauge(
+            "drift_av_last_run_timestamp_seconds",
+            "Unix timestamp of the latest adversarial validation run",
+            registry=self.registry,
+        )
+        self.av_dataset_size = Gauge(
+            "drift_av_dataset_size",
+            "Balanced rows per dataset used by adversarial validation",
+            registry=self.registry,
+        )
+        self.av_reference_rows = Gauge(
+            "drift_av_reference_rows",
+            "Reference rows used by adversarial validation",
+            registry=self.registry,
+        )
+        self.av_current_rows = Gauge(
+            "drift_av_current_rows",
+            "Current rows available to adversarial validation",
+            registry=self.registry,
+        )
+        self.av_features_evaluated = Gauge(
+            "drift_av_features_evaluated",
+            "Number of features evaluated by adversarial validation",
+            registry=self.registry,
+        )
+        self.av_sample_fraction = Gauge(
+            "drift_av_sample_fraction",
+            "Fraction of each source dataset used in the balanced AV sample",
+            ["dataset"],
+            registry=self.registry,
+        )
+        self.av_feature_importance = Gauge(
+            "drift_av_feature_importance",
+            "Top adversarial-validation feature importance",
+            ["feature", "rank"],
+            registry=self.registry,
+        )
+        self.av_threshold = Gauge(
+            "drift_av_threshold",
+            "Configured adversarial-validation ROC-AUC thresholds",
+            ["level"],
+            registry=self.registry,
+        )
+
         self.overall_status.set(-1)
         self.active_alerts.set(0)
         self.window_size.set(0)
         self.stream_status.set(-1)
         self.last_analysis_age_seconds.set(-1)
         self.report_timestamp.set(0)
+        self.av_status.set(-1)
+        self.av_available.set(0)
+        self.av_roc_auc.set(-1)
+        self.av_roc_auc_cv_std.set(-1)
+        self.av_roc_auc_cv_mean.set(-1)
+        self.av_roc_auc_cv_min.set(-1)
+        self.av_roc_auc_cv_max.set(-1)
+        self.av_driver_consistency.set(-1)
+        self.av_driver_similarity_previous.set(-1)
+        self.av_top1_importance_share.set(-1)
+        self.av_top3_importance_share.set(-1)
+        self.av_timestamp.set(-1)
+        self.av_last_run_timestamp.set(-1)
+        self.av_dataset_size.set(0)
+        self.av_reference_rows.set(0)
+        self.av_current_rows.set(0)
+        self.av_features_evaluated.set(0)
+        self.av_sample_fraction.clear()
 
         self._last_analysis_monotonic: float | None = None
         self._last_late_events = 0
@@ -344,11 +465,135 @@ class PrometheusExporter:
                 prediction=True,
             )
 
+        self.update_adversarial_validation(report.get("adversarial_validation"))
+
         for metric, pair in thresholds.items():
             for level in ("warning", "critical"):
                 value = pair.get(level)
                 if value is not None:
                     self.threshold.labels(metric=metric, level=level).set(value)
+
+    def update_adversarial_validation(self, block: Any) -> None:
+        """Экспортирует необязательный результат adversarial validation."""
+        self.av_feature_importance.clear()
+        self.av_threshold.clear()
+        self.av_status.set(-1)
+        self.av_available.set(0)
+        self.av_roc_auc.set(-1)
+        self.av_roc_auc_cv_std.set(-1)
+        self.av_roc_auc_cv_mean.set(-1)
+        self.av_roc_auc_cv_min.set(-1)
+        self.av_roc_auc_cv_max.set(-1)
+        self.av_driver_consistency.set(-1)
+        self.av_driver_similarity_previous.set(-1)
+        self.av_top1_importance_share.set(-1)
+        self.av_top3_importance_share.set(-1)
+        self.av_timestamp.set(-1)
+        self.av_last_run_timestamp.set(-1)
+        self.av_dataset_size.set(0)
+        self.av_reference_rows.set(0)
+        self.av_current_rows.set(0)
+        self.av_features_evaluated.set(0)
+        self.av_sample_fraction.clear()
+
+        if not isinstance(block, dict):
+            return
+
+        self.av_available.set(1)
+        self.av_status.set(_status_number(block.get("status"), -1))
+
+        roc_auc = _finite_float(block.get("roc_auc"))
+        if roc_auc is not None:
+            self.av_roc_auc.set(roc_auc)
+
+        roc_auc_cv_std = _finite_float(block.get("roc_auc_cv_std"))
+        if roc_auc_cv_std is not None:
+            self.av_roc_auc_cv_std.set(roc_auc_cv_std)
+
+        for key, gauge in (
+            ("roc_auc_cv_mean", self.av_roc_auc_cv_mean),
+            ("roc_auc_cv_min", self.av_roc_auc_cv_min),
+            ("roc_auc_cv_max", self.av_roc_auc_cv_max),
+            ("driver_consistency", self.av_driver_consistency),
+            ("driver_similarity_previous", self.av_driver_similarity_previous),
+            ("top1_importance_share", self.av_top1_importance_share),
+        ):
+            value = _finite_float(block.get(key))
+            if value is not None:
+                gauge.set(value)
+
+        top3_importance_share = _finite_float(block.get("top3_importance_share"))
+        if top3_importance_share is not None:
+            self.av_top3_importance_share.set(top3_importance_share)
+
+        timestamp = _parse_timestamp_seconds(block.get("timestamp"))
+        if timestamp is not None:
+            self.av_timestamp.set(timestamp)
+            self.av_last_run_timestamp.set(timestamp)
+
+        reference_rows = _finite_float(block.get("reference_rows"))
+        if reference_rows is not None:
+            self.av_reference_rows.set(reference_rows)
+
+        current_rows = _finite_float(block.get("current_rows"))
+        if current_rows is not None:
+            self.av_current_rows.set(current_rows)
+
+        dataset_size = _finite_float(block.get("dataset_size"))
+        if dataset_size is None and reference_rows is not None and current_rows is not None:
+            dataset_size = min(reference_rows, current_rows)
+        if dataset_size is not None:
+            self.av_dataset_size.set(dataset_size)
+
+        features_evaluated = _finite_float(block.get("features_evaluated"))
+        if features_evaluated is not None:
+            self.av_features_evaluated.set(features_evaluated)
+
+        reference_fraction = _finite_float(block.get("reference_sample_fraction"))
+        if (
+            reference_fraction is None
+            and dataset_size is not None
+            and reference_rows is not None
+            and reference_rows > 0
+        ):
+            reference_fraction = dataset_size / reference_rows
+        if reference_fraction is not None:
+            self.av_sample_fraction.labels(dataset="reference").set(reference_fraction)
+
+        current_fraction = _finite_float(block.get("current_sample_fraction"))
+        if (
+            current_fraction is None
+            and dataset_size is not None
+            and current_rows is not None
+            and current_rows > 0
+        ):
+            current_fraction = dataset_size / current_rows
+        if current_fraction is not None:
+            self.av_sample_fraction.labels(dataset="current").set(current_fraction)
+
+        raw_thresholds = block.get("thresholds")
+        if isinstance(raw_thresholds, dict):
+            for level in ("warning", "critical"):
+                value = _finite_float(raw_thresholds.get(level))
+                if value is not None:
+                    self.av_threshold.labels(level=level).set(value)
+
+        raw_importance = block.get("feature_importance")
+        if not isinstance(raw_importance, list):
+            return
+
+        for item in raw_importance:
+            if not isinstance(item, dict):
+                continue
+            feature = item.get("feature")
+            importance = _finite_float(item.get("importance"))
+            rank = _finite_float(item.get("rank"))
+            if feature is None or importance is None or rank is None:
+                continue
+            self.av_feature_importance.labels(
+                feature=str(feature),
+                rank=str(int(rank)),
+            ).set(importance)
 
     def _clear_dynamic_report_series(self) -> None:
         self.status_feature.clear()
@@ -417,8 +662,8 @@ class PrometheusExporter:
             if value is None:
                 continue
 
-            if nested_thresholds:
-                thresholds.setdefault(metric, {}).update(nested_thresholds)
+            if nested_thresholds and metric not in thresholds:
+                thresholds[metric] = dict(nested_thresholds)
 
             if metric_status is None:
                 metric_status = _alert_status(raw_metric, alerts)

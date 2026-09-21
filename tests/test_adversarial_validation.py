@@ -11,7 +11,10 @@ from drift_guardian.batch.adversarial_validation import (
     adversarial_validation,
 )
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/feature/second-part-realtime-pipeline
 adversarial_module = importlib.import_module(
     "drift_guardian.batch.adversarial_validation"
 )
@@ -56,6 +59,22 @@ class AdversarialValidationTests(unittest.TestCase):
         self.assertTrue(importance["importance"].is_monotonic_decreasing)
         self.assertListEqual(importance["rank"].tolist(), [1, 2, 3])
         self.assertAlmostEqual(float(importance["importance"].sum()), 1.0)
+<<<<<<< HEAD
+=======
+        for key in (
+            "roc_auc_cv_mean",
+            "roc_auc_cv_std",
+            "roc_auc_cv_min",
+            "roc_auc_cv_max",
+            "driver_consistency",
+        ):
+            self.assertIn(key, importance.attrs)
+        self.assertGreaterEqual(importance.attrs["roc_auc_cv_std"], 0.0)
+        self.assertLessEqual(importance.attrs["roc_auc_cv_min"], importance.attrs["roc_auc_cv_mean"])
+        self.assertLessEqual(importance.attrs["roc_auc_cv_mean"], importance.attrs["roc_auc_cv_max"])
+        self.assertGreaterEqual(importance.attrs["driver_consistency"], 0.0)
+        self.assertLessEqual(importance.attrs["driver_consistency"], 1.0)
+>>>>>>> origin/feature/second-part-realtime-pipeline
 
     def test_prepare_features_uses_reference_dtypes(self) -> None:
         """Проверяет приведение типов и обработку специальных значений."""

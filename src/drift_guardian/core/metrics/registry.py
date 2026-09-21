@@ -1,13 +1,14 @@
-from drift_guardian.core.parse_config import Metric
-
 from typing import Protocol
 
 import pandas as pd
 
+from drift_guardian.core.parse_config import Metric
+
+
 class MetricFn(Protocol):
-    def __call__(self, 
-                 reference: pd.Series, 
-                 current: pd.Series, 
+    def __call__(self,
+                 reference: pd.Series,
+                 current: pd.Series,
                  **kwargs) -> float : ...
 
 
@@ -19,5 +20,3 @@ def register(metric: Metric):
         METRIC_REGISTRY[metric] = fn
         return fn
     return wrapper
-
-
