@@ -1,4 +1,4 @@
-"""Dataset-level drift detection with adversarial validation."""
+"""Adversarial validation для поиска drift между reference и current."""
 
 from __future__ import annotations
 
@@ -28,49 +28,28 @@ def adversarial_validation(
     missing_category: str = "__missing__",
     lightgbm_params: dict[str, Any] | None = None,
 ) -> tuple[float, pd.DataFrame]:
-    """Оценить разделимость подготовленных датасетов reference и current.
+    """Оценивает различимость reference и current через LightGBM.
 
-    Функция обучает LightGBM различать строки двух датасетов и возвращает
-    ROC AUC на out-of-fold предсказаниях. Чем выше AUC, тем легче модели
-    различить датасеты. Метрика служит индикатором возможного дрифта.
+    Датасеты выравниваются по размеру, после чего модель учится отличать
+    reference от current. Итоговый ROC-AUC считается по out-of-fold
+    предсказаниям, а feature importance усредняется по CV-фолдам.
 
-    Для баланса классов каждый датасет сэмплируется до размера меньшего
-    из них, но не более `max_samples` строк.
+    Схема признаков берётся из reference. Числовые пропуски сохраняются как
+    NaN, категориальные заполняются значением ``missing_category``.
 
-    Схема признаков берется из `reference`. Числовые пропущенные значения
-    сохраняются как NaN для нативной обработки алгоритмом LightGBM.
-    Столбцы типов object, string, category и boolean обрабатываются как
-    категориальные, их пропущенные значения обозначаются как `missing_category`.
-
-    Args:
-        reference: Базовый (эталонный) датасет. Его dtypes определяют схему признаков.
-        current: Текущий датасет для сравнения с базовым. Должен содержать
-            как минимум все колонки reference (лишние колонки игнорируются).
-        max_samples: Верхняя граница размера каждой из двух выборок.
-        n_splits: Число фолдов кросс-валидации (минимум 2).
-        random_state: Сид для сэмплирования, разбиения на фолды и обучения модели.
-        missing_category: Строка, которой заполняются пропуски в категориальных колонках.
-        lightgbm_params: Дополнительные параметры `LGBMClassifier`.
-            Перезаписывают стандартные параметры модели, кроме `objective="binary"`
-            и `metric="auc"`. Feature importance всегда рассчитывается по `gain`.
-
-    Returns:
-        tuple[float, pd.DataFrame]: OOF ROC AUC и таблица feature importance
-            со столбцами `feature`, `importance`, `importance_std` и `rank`.
-            Importance – это gain LightGBM, нормализованный и усредненный по фолдам.
-
-    Raises:
-        TypeError: Если аргументы имеют неподдерживаемые типы.
-        ValueError: Если значения аргументов не подходят для валидации.
-
-    Note:
-        В каждом фолде early stopping выбирает число деревьев по той же
-        валидационной выборке, для которой строятся OOF-предсказания.
-        Это может завысить итоговый ROC AUC. Полученная оценка используется
-        как индикатор возможного дрифта.
+    :param reference: Эталонный DataFrame, определяющий набор и типы признаков.
+    :param current: Текущий DataFrame. Лишние колонки игнорируются.
+    :param max_samples: Максимальное число строк каждого класса после балансировки.
+    :param n_splits: Число CV-фолдов, минимум 2.
+    :param random_state: Seed для sampling, CV и LightGBM.
+    :param missing_category: Значение для пропусков категориальных признаков.
+    :param lightgbm_params: Дополнительные параметры ``LGBMClassifier``.
+    :return: OOF ROC-AUC и DataFrame с feature importance.
+    :raises TypeError: если переданы неподдерживаемые типы аргументов.
+    :raises ValueError: если параметры или размеры выборок некорректны.
     """
 
-    # Проверка параметров функции до сэмплирования и обучения модели
+    # проверяем параметры до sampling и обучения модели
     _validate_inputs(
         reference,
         current,
@@ -80,7 +59,7 @@ def adversarial_validation(
         lightgbm_params=lightgbm_params,
     )
 
-    # Выравнивание классов путем случайной выборки из reference и current
+    # выравниваем классы случайной выборкой из reference и current
     sample_size = min(len(reference), len(current), max_samples)
 
     reference_sample = reference.sample(n=sample_size, random_state=random_state)
@@ -89,20 +68,20 @@ def adversarial_validation(
         random_state=random_state,
     )
 
-    # Объединение выборок в один DataFrame для обучения модели
+    # объединяем reference и current для обучения бинарного классификатора
     features = pd.concat([reference_sample, current_sample], ignore_index=True)
 
-    # Подготовка признаков: приведение типов к типам reference, обработка пропусков
+    # приводим признаки к схеме reference и обрабатываем пропуски
     features = _prepare_features(
         features, reference, missing_category=missing_category
     )
 
-    # Создание целевой переменной: 0 для reference, 1 для current
+    # target: 0 для reference, 1 для current
     target = np.concatenate(
         [np.zeros(sample_size, dtype=np.int8), np.ones(sample_size, dtype=np.int8)]
     )
 
-    # Настройка кросс-валидации
+    # создаём воспроизводимое stratified CV-разбиение
     splitter = StratifiedKFold(
         n_splits=n_splits,
         shuffle=True,
@@ -112,7 +91,7 @@ def adversarial_validation(
     fold_importances: list[np.ndarray] = []
     fold_roc_auc_scores: list[float] = []
 
-    # Настройка параметров LightGBM с возможностью переопределения пользователем
+    # задаём базовые параметры LightGBM и применяем пользовательские overrides
     default_model_params = {
         "n_estimators": 1_000,
         "max_depth": 4,
@@ -125,13 +104,13 @@ def adversarial_validation(
     }
     model_params = default_model_params | (lightgbm_params or {})
 
-    # Invariants
+    # objective и metric фиксированы контрактом AV
     model_params["objective"] = "binary"
     model_params["metric"] = "auc"
 
-    # Обучение модели и сбор метрик по фолдам
+    # обучаем модель и собираем OOF-предсказания по фолдам
     for train_indices, validation_indices in splitter.split(features, target):
-        # Разделение на обучающую и валидационную выборки
+        # разделяем текущий фолд на train и validation
         X_train = features.iloc[train_indices]
         y_train = target[train_indices]
 
@@ -159,15 +138,15 @@ def adversarial_validation(
         oof_probabilities[validation_indices] = fold_probabilities
         fold_roc_auc_scores.append(float(roc_auc_score(y_val, fold_probabilities)))
 
-        # Сбор feature importances по фолдам
+        # сохраняем нормализованный gain текущего фолда
         gain = model.booster_.feature_importance(importance_type="gain")
         gain_sum = gain.sum()
 
-        # Защита от деления на ноль, если модель не использовала ни одного признака
+        # нулевой gain оставляем нулевым вектором importance
         normalized_gain = gain / gain_sum if gain_sum else np.zeros_like(gain)
         fold_importances.append(normalized_gain)
 
-    # Вычисление ROC AUC и усредненной feature importance
+    # считаем общий OOF ROC-AUC и агрегируем importance по фолдам
     roc_auc = float(roc_auc_score(target, oof_probabilities))
     importance_values = np.vstack(fold_importances)
     feature_importance = pd.DataFrame(
@@ -177,15 +156,14 @@ def adversarial_validation(
             "importance_std": importance_values.std(axis=0),
         }
     )
-    # Сортировка по убыванию важности и присвоение рангов
+    # сортируем признаки по убыванию importance и добавляем rank
     feature_importance = feature_importance.sort_values(
         "importance",
         ascending=False,
         kind="stable",
     ).reset_index(drop=True)
     feature_importance["rank"] = np.arange(1, len(feature_importance) + 1)
-    # Не меняем публичную сигнатуру AV: диагностические CV-метрики храним
-    # в attrs возвращаемого DataFrame и читаем их в realtime adapter.
+    # сохраняем дополнительные CV-метрики в attrs, не меняя публичный return contract
     fold_auc = np.asarray(fold_roc_auc_scores, dtype=float)
     feature_importance.attrs["roc_auc_cv_mean"] = float(fold_auc.mean())
     feature_importance.attrs["roc_auc_cv_std"] = float(fold_auc.std())
@@ -199,11 +177,13 @@ def adversarial_validation(
 
 
 def _mean_pairwise_cosine(vectors: np.ndarray) -> float:
-    """Средняя согласованность feature importance между CV-фолдами.
+    """Считает согласованность feature importance между CV-фолдами.
 
-    Для каждой пары фолдов считается cosine similarity нормализованных gain-векторов.
-    Значение 1 означает полностью согласованный набор драйверов, 0 — отсутствие
-    общего направления. Два нулевых вектора считаются согласованными.
+    Для каждой пары фолдов используется cosine similarity нормализованных
+    gain-векторов. Два нулевых вектора считаются согласованными.
+
+    :param vectors: Матрица importance, одна строка на CV-фолд.
+    :return: Среднее pairwise cosine similarity в диапазоне от 0 до 1.
     """
     if len(vectors) < 2:
         return 1.0
@@ -236,8 +216,12 @@ def _validate_inputs(
     missing_category: str,
     lightgbm_params: dict[str, Any] | None,
 ) -> None:
-    """Проверка дополнительных аргументов на корректность."""
-    # Типы дополнительных аргументов
+    """Проверяет параметры adversarial validation.
+
+    :raises TypeError: если тип аргумента не поддерживается.
+    :raises ValueError: если значение аргумента или размер выборки некорректны.
+    """
+    # проверяем типы дополнительных аргументов
     if isinstance(max_samples, bool) or not isinstance(max_samples, Integral):
         raise TypeError("max_samples must be an integer")
     if isinstance(n_splits, bool) or not isinstance(n_splits, Integral):
@@ -247,7 +231,7 @@ def _validate_inputs(
     if lightgbm_params is not None and not isinstance(lightgbm_params, dict):
         raise TypeError("lightgbm_params must be a dictionary or None")
 
-    # Допустимые значения дополнительных аргументов
+    # проверяем допустимые значения дополнительных аргументов
     if max_samples <= 0:
         raise ValueError(f"max_samples must be positive, got {max_samples}")
     if n_splits < 2:
@@ -255,7 +239,7 @@ def _validate_inputs(
     if not missing_category:
         raise ValueError("missing_category must not be empty")
 
-    # Проверка достаточности размера выборок для кросс-валидации
+    # проверяем, что после балансировки данных достаточно для CV
     sample_size = min(len(reference), len(current), max_samples)
     if sample_size < n_splits:
         raise ValueError(
@@ -270,7 +254,14 @@ def _prepare_features(
     *,
     missing_category: str,
 ) -> pd.DataFrame:
-    """Определить типы по reference и подготовить признаки для LightGBM."""
+    """Приводит признаки к схеме reference для обучения LightGBM.
+
+    :param features: Объединённый DataFrame reference и current.
+    :param reference: DataFrame, определяющий ожидаемые dtypes.
+    :param missing_category: Значение для категориальных пропусков.
+    :return: Подготовленный DataFrame признаков.
+    :raises TypeError: если dtype признака не поддерживается.
+    """
     prepared = features.copy()
 
     for column in reference.columns:

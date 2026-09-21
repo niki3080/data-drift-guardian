@@ -37,7 +37,7 @@ def _env_flag(name: str, default: bool = False) -> bool:
 
 
 def _parse_av_thresholds(raw: Any) -> dict[str, float]:
-    """Парсит ROC-AUC thresholds для AV status из runtime-конфига."""
+    """Проверяет и нормализует ROC-AUC thresholds для AV status."""
     if raw is None:
         return {}
     if not isinstance(raw, dict):
@@ -67,7 +67,7 @@ def _parse_av_thresholds(raw: Any) -> dict[str, float]:
 
 
 def _av_status(roc_auc: float, thresholds: dict[str, float]) -> str | None:
-    """Возвращает AV drift status, если thresholds явно настроены."""
+    """Возвращает AV status по ROC-AUC и настроенным thresholds."""
     if not thresholds:
         return None
     if roc_auc >= thresholds["critical"]:
@@ -78,12 +78,14 @@ def _av_status(roc_auc: float, thresholds: dict[str, float]) -> str | None:
 
 
 
-
 def _importance_similarity_previous(
     current: dict[str, float],
     previous: dict[str, float],
 ) -> float | None:
-    """Cosine similarity AV importance vectors between consecutive windows."""
+    """Сравнивает AV importance текущего и предыдущего окна.
+
+    :return: Cosine similarity или ``None`` для первого AV-запуска.
+    """
     if not previous:
         return None
 
@@ -97,8 +99,13 @@ def _importance_similarity_previous(
         return 0.0
     return float(dot / (current_norm * previous_norm))
 
+
 def load_reference_dataframe(path: str | Path) -> pd.DataFrame:
-    """Загружает reference dataset из CSV или Parquet."""
+    """Загружает reference dataset из CSV или Parquet.
+
+    :raises FileNotFoundError: если файл не существует.
+    :raises ValueError: если формат файла не поддерживается.
+    """
     reference_path = Path(path)
     if not reference_path.exists():
         raise FileNotFoundError(f"reference dataset not found: {reference_path}")
@@ -116,10 +123,13 @@ def load_reference_dataframe(path: str | Path) -> pd.DataFrame:
 
 
 def load_runtime_contract(path: str | Path) -> dict[str, Any]:
-    """Читает из конфига только поля, необходимые realtime-слою.
+    """Читает поля runtime-контракта из YAML-конфига.
 
-    Парсер Core здесь намеренно не используется: realtime зависит только от
-    списка фич, настроек prediction и порогов, которые нужно передать дальше.
+    Realtime-слою нужны список признаков, prediction settings, глобальные
+    thresholds и настройки adversarial validation.
+
+    :param path: Путь к YAML-конфигу.
+    :return: Нормализованный словарь runtime-настроек.
     """
     config_path = Path(path)
     if not config_path.exists():
@@ -175,7 +185,7 @@ def load_runtime_contract(path: str | Path) -> dict[str, Any]:
         adversarial.get("thresholds")
     )
 
-    # сохраняем порядок из конфига и удаляем дубликаты
+    # сохраняем порядок из конфига и удаляем дубликаты колонок
     monitored_columns = list(dict.fromkeys(monitored_columns))
     return {
         "monitored_columns": monitored_columns,
@@ -188,10 +198,10 @@ def load_runtime_contract(path: str | Path) -> dict[str, Any]:
 
 @dataclass(slots=True)
 class EngineAdapter:
-    """Связывает realtime-окно с текущим API drift-анализатора.
+    """Связывает realtime-окно с drift-анализатором.
 
-    Адаптер загружает reference sample, валидирует входные признаки, вызывает
-    Core и дополняет отчёт runtime-полями, нужными Prometheus exporter.
+    Адаптер хранит reference sample, валидирует входные признаки, вызывает
+    основной analyzer и при необходимости дополняет report результатом AV.
     """
 
     reference_df: pd.DataFrame
@@ -221,7 +231,10 @@ class EngineAdapter:
         enable_adversarial_validation: bool = True,
         adversarial_top_features: int = 10,
     ) -> EngineAdapter:
-        """Создаёт адаптер из reference dataset и runtime-конфига."""
+        """Создаёт адаптер из reference dataset и runtime-конфига.
+
+        :raises ValueError: если reference или runtime-настройки некорректны.
+        """
         if sample_size <= 0:
             raise ValueError("reference sample_size must be positive")
         if adversarial_top_features <= 0:
@@ -259,9 +272,8 @@ class EngineAdapter:
 
         checker = None
         if enable_schema_check:
-            # Фичи на уровне события считаем опциональными: отсутствующее значение
-            # материализуется как None, чтобы Core мог посчитать missing_rate.
-            # Для переданных значений SchemaChecker по-прежнему проверяет тип.
+            # отсутствующие признаки остаются None, чтобы анализ мог учитывать
+            # missing_rate; переданные значения по-прежнему проверяются по типу
             checker = SchemaChecker(reference_df, required_cols=set())
 
         return cls(
@@ -282,7 +294,7 @@ class EngineAdapter:
         )
 
     def validate_features(self, features: dict[str, Any]) -> dict[str, Any]:
-        """Проверяет поля признаков события по схеме reference sample."""
+        """Проверяет поля события по схеме reference sample."""
         if self.schema_checker is None:
             return features
         is_valid, validated, error = self.schema_checker.check_event(features)
@@ -339,7 +351,7 @@ class EngineAdapter:
                 "top3_importance_share": top3_importance_share,
                 "reference_rows": len(self.reference_df),
                 "current_rows": len(current_df),
-                # AV выравнивает классы, поэтому это число строк на один класс.
+                # AV выравнивает классы, поэтому сохраняем размер одного класса
                 "dataset_size": min(len(self.reference_df), len(current_df)),
                 "features_evaluated": len(importance),
                 "reference_sample_fraction": (
@@ -389,7 +401,7 @@ class EngineAdapter:
         return runtime_report
 
     def get_reference_metadata(self) -> dict[str, Any]:
-        """Возвращает метаданные активного reference sample для Prometheus."""
+        """Возвращает метаданные активного reference sample."""
         return {
             "profile_created_at": self.profile_created_at,
             "dataset_name": self.dataset_name,
@@ -398,7 +410,7 @@ class EngineAdapter:
 
 
 def build_engine_adapter_from_env(window_size: int) -> EngineAdapter:
-    """Создаёт EngineAdapter по переменным окружения realtime-сервиса."""
+    """Создаёт EngineAdapter из переменных окружения realtime-сервиса."""
     if window_size <= 0:
         raise ValueError("window_size must be positive")
 

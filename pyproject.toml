@@ -26,6 +26,7 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "ipykernel>=7.3.0",
+    "pytest>=9.1.1",
     "rich>=15.0.0",
 ]
 notebooks = [
@@ -39,3 +40,7 @@ notebooks = [
 profile = "black"
 known_first_party = ["drift_guardian"]
 src_paths = ["src", "tests", "monitoring"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
