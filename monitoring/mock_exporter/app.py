@@ -192,7 +192,7 @@ av_dataset_size = Gauge(
 )
 av_reference_rows = Gauge(
     "drift_av_reference_rows",
-    "Reference rows used by adversarial validation",
+    "Reference rows available to adversarial validation",
 )
 av_current_rows = Gauge(
     "drift_av_current_rows",

@@ -40,23 +40,20 @@ def _validate_metric_threshold(
     if metric in REVERSED_THRESHOLD_METRICS:
         if pair.warning <= pair.critical:
             raise ValueError(
-                f"Для {label}.{metric.value} warning ({pair.warning}) должен быть "
-                f"больше critical ({pair.critical})"
+                f"For {label}.{metric.value}, warning ({pair.warning}) must be "
+                f"greater than critical ({pair.critical})"
             )
         return
 
     if pair.warning >= pair.critical:
         raise ValueError(
-            f"Для {label}.{metric.value} warning ({pair.warning}) должен быть "
-            f"меньше critical ({pair.critical})"
+            f"For {label}.{metric.value}, warning ({pair.warning}) must be "
+            f"less than critical ({pair.critical})"
         )
 
 
 class TypedMetricsConfig(BaseModel):
-    """
-    Базовый класс для конфигов, где набор допустимых метрик
-    зависит от типа фичи (numeric / categorical).
-    """
+    """Базовая схема метрик для numeric и categorical признаков."""
 
     type: Optional[FeatureType] = None
     metrics: List[Metric] = Field(default_factory=list)
@@ -86,13 +83,13 @@ class TypedMetricsConfig(BaseModel):
             wrong := set(self.metrics) & self.NUMERIC_ONLY_METRICS
         ):
             raise ValueError(
-                f"{[m.value for m in wrong]} недопустим(ы) для categorical-фичей"
+                f"{[m.value for m in wrong]} are not allowed for categorical features"
             )
         if self.type == FeatureType.numeric and (
             wrong := set(self.metrics) & self.CATEGORICAL_ONLY_METRICS
         ):
             raise ValueError(
-                f"{[m.value for m in wrong]} недопустим(ы) для numeric-фичей"
+                f"{[m.value for m in wrong]} are not allowed for numeric features"
             )
         return self
 
@@ -102,8 +99,8 @@ class TypedMetricsConfig(BaseModel):
             extra = set(self.thresholds) - set(self.metrics)
             if extra:
                 raise ValueError(
-                    f"thresholds заданы для метрик {[m.value for m in extra]}, "
-                    "которые не входят в metrics этой фичи"
+                    f"Thresholds are configured for metrics {[m.value for m in extra]} "
+                    "that are not enabled for this feature"
                 )
         return self
 
@@ -132,16 +129,13 @@ class PredictionMetricsConfig(TypedMetricsConfig):
 
         if missing:
             raise ValueError(
-                f"При enabled=True обязательны поля: {', '.join(missing)}"
+                f"When enabled=True, required fields are missing: {', '.join(missing)}"
             )
         return self
 
+
 class StreamDriftConfig(BaseModel):
-    """
-    Метрики состояния стрима событий (event-time drift monitoring).
-    Каждая заданная метрика обязана содержать корректную пару
-    warning/critical с обычным направлением: warning < critical.
-    """
+    """Пороговые настройки технических метрик realtime-потока."""
 
     drift_stream_status: Optional[ThresholdPair] = None
     drift_event_time_lag_seconds: Optional[ThresholdPair] = None
@@ -156,14 +150,14 @@ class StreamDriftConfig(BaseModel):
         for name, pair in self.__dict__.items():
             if isinstance(pair, ThresholdPair) and pair.warning >= pair.critical:
                 raise ValueError(
-                    f"Для stream_drift.{name} warning ({pair.warning}) должен быть "
-                    f"меньше critical ({pair.critical})"
+                    f"For stream_drift.{name}, warning ({pair.warning}) must be "
+                    f"less than critical ({pair.critical})"
                 )
         return self
 
 
 class AdversarialValidationConfig(BaseModel):
-    """Настройки dataset-level drift status по ROC-AUC adversarial validation."""
+    """Настройки adversarial validation и порогов ROC-AUC."""
 
     enabled: bool = True
     thresholds: Optional[ThresholdPair] = None
@@ -175,7 +169,7 @@ class AdversarialValidationConfig(BaseModel):
             return self
         if not (0.5 <= pair.warning < pair.critical <= 1.0):
             raise ValueError(
-                "Для adversarial_validation.thresholds требуется "
+                "adversarial_validation.thresholds must satisfy "
                 "0.5 <= warning < critical <= 1.0"
             )
         return self
@@ -187,7 +181,7 @@ class Config(BaseModel):
     stream_drift: Optional[StreamDriftConfig] = None
     adversarial_validation: Optional[AdversarialValidationConfig] = None
 
-    # глобальные дефолтные трешхолды "по метрике" (fallback, если у фичи нет override)
+    # глобальные пороги используются, если для feature нет локального override
     thresholds: Dict[Metric, ThresholdPair] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -219,8 +213,8 @@ class Config(BaseModel):
 
             if missing:
                 raise ValueError(
-                    f"Для {label} не заданы thresholds для метрик {missing} "
-                    "(ни глобально в Config.thresholds, ни локально в самой фиче)"
+                    f"No thresholds are configured for {label} metrics {missing} "
+                    "in either Config.thresholds or the local feature settings"
                 )
             block.resolved_thresholds = merged
 
@@ -238,7 +232,3 @@ def read_config(path):
         raw = yaml.safe_load(f)
     config = Config(**raw)
     return config
-
-
-# example_config = read_config(r"F:\s21_proj\data-drift-guardian\config\config.yaml")
-# print(example_config)

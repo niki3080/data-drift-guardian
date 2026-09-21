@@ -284,7 +284,7 @@ class PrometheusExporter:
         )
         self.av_reference_rows = Gauge(
             "drift_av_reference_rows",
-            "Reference rows used by adversarial validation",
+            "Reference rows available to adversarial validation",
             registry=self.registry,
         )
         self.av_current_rows = Gauge(
