@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from numbers import Integral
 from typing import Any
 
@@ -16,6 +17,8 @@ from pandas.api.types import (
 )
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import StratifiedKFold
+
+logger = logging.getLogger(__name__)
 
 
 def adversarial_validation(
@@ -38,8 +41,8 @@ def adversarial_validation(
     из них, но не более `max_samples` строк.
 
     Схема признаков берется из `reference`. Числовые пропущенные значения
-    сохраняются как NaN для нативной обработки алгоритмом LightGBM. 
-    Столбцы типов object, string, category и boolean обрабатываются как 
+    сохраняются как NaN для нативной обработки алгоритмом LightGBM.
+    Столбцы типов object, string, category и boolean обрабатываются как
     категориальные, их пропущенные значения обозначаются как `missing_category`.
 
     Args:
@@ -69,6 +72,15 @@ def adversarial_validation(
         Это может завысить итоговый ROC AUC. Полученная оценка используется
         как индикатор возможного дрифта.
     """
+    logger.info(
+        "Starting adversarial validation: reference_rows=%d, current_rows=%d, "
+        "max_samples=%d, n_splits=%d, random_state=%d",
+        len(reference),
+        len(current),
+        max_samples,
+        n_splits,
+        random_state,
+    )
 
     # Проверка параметров функции до сэмплирования и обучения модели
     _validate_inputs(
@@ -79,9 +91,11 @@ def adversarial_validation(
         missing_category=missing_category,
         lightgbm_params=lightgbm_params,
     )
+    logger.debug("Input validation passed")
 
     # Выравнивание классов путем случайной выборки из reference и current
     sample_size = min(len(reference), len(current), max_samples)
+    logger.info("Sampling %d rows from each dataset for balanced classes", sample_size)
 
     reference_sample = reference.sample(n=sample_size, random_state=random_state)
     current_sample = current.loc[:, reference.columns].sample(
@@ -91,11 +105,13 @@ def adversarial_validation(
 
     # Объединение выборок в один DataFrame для обучения модели
     features = pd.concat([reference_sample, current_sample], ignore_index=True)
+    logger.debug("Combined feature matrix shape: %s", features.shape)
 
     # Подготовка признаков: приведение типов к типам reference, обработка пропусков
     features = _prepare_features(
         features, reference, missing_category=missing_category
     )
+    logger.debug("Feature preparation completed for %d columns", features.shape[1])
 
     # Создание целевой переменной: 0 для reference, 1 для current
     target = np.concatenate(
@@ -127,9 +143,20 @@ def adversarial_validation(
     # Invariants
     model_params["objective"] = "binary"
     model_params["metric"] = "auc"
+    logger.debug("Effective LightGBM params: %s", model_params)
 
     # Обучение модели и сбор метрик по фолдам
-    for train_indices, validation_indices in splitter.split(features, target):
+    for fold_index, (train_indices, validation_indices) in enumerate(
+        splitter.split(features, target), start=1
+    ):
+        logger.info(
+            "Training fold %d/%d: train_size=%d, val_size=%d",
+            fold_index,
+            n_splits,
+            len(train_indices),
+            len(validation_indices),
+        )
+
         # Разделение на обучающую и валидационную выборки
         X_train = features.iloc[train_indices]
         y_train = target[train_indices]
@@ -151,22 +178,41 @@ def adversarial_validation(
                 )
             ],
         )
+        logger.debug(
+            "Fold %d: best_iteration=%s (out of n_estimators=%s)",
+            fold_index,
+            model.best_iteration_,
+            model_params["n_estimators"],
+        )
 
         oof_probabilities[validation_indices] = model.predict_proba(
             X_val,
             num_iteration=model.best_iteration_,
         )[:, 1]
 
+        fold_auc = roc_auc_score(y_val, oof_probabilities[validation_indices])
+        logger.info("Fold %d ROC AUC: %.4f", fold_index, fold_auc)
+
         # Сбор feature importances по фолдам
         gain = model.booster_.feature_importance(importance_type="gain")
         gain_sum = gain.sum()
 
         # Защита от деления на ноль, если модель не использовала ни одного признака
-        normalized_gain = gain / gain_sum if gain_sum else np.zeros_like(gain)
+        if gain_sum:
+            normalized_gain = gain / gain_sum
+        else:
+            logger.warning(
+                "Fold %d: model produced zero total gain, "
+                "feature importances set to zero for this fold",
+                fold_index,
+            )
+            normalized_gain = np.zeros_like(gain)
         fold_importances.append(normalized_gain)
 
     # Вычисление ROC AUC и усредненной feature importance
     roc_auc = float(roc_auc_score(target, oof_probabilities))
+    logger.info("Overall OOF ROC AUC: %.4f", roc_auc)
+
     importance_values = np.vstack(fold_importances)
     feature_importance = pd.DataFrame(
         {
@@ -183,6 +229,12 @@ def adversarial_validation(
     ).reset_index(drop=True)
     feature_importance["rank"] = np.arange(1, len(feature_importance) + 1)
 
+    logger.debug(
+        "Top feature by importance: %s",
+        feature_importance.iloc[0].to_dict() if not feature_importance.empty else None,
+    )
+    logger.info("Adversarial validation completed successfully")
+
     return roc_auc, feature_importance
 
 
@@ -198,25 +250,37 @@ def _validate_inputs(
     """Проверка дополнительных аргументов на корректность."""
     # Типы дополнительных аргументов
     if isinstance(max_samples, bool) or not isinstance(max_samples, Integral):
+        logger.error("Invalid max_samples type: %s", type(max_samples))
         raise TypeError("max_samples must be an integer")
     if isinstance(n_splits, bool) or not isinstance(n_splits, Integral):
+        logger.error("Invalid n_splits type: %s", type(n_splits))
         raise TypeError("n_splits must be an integer")
     if not isinstance(missing_category, str):
+        logger.error("Invalid missing_category type: %s", type(missing_category))
         raise TypeError("missing_category must be a string")
     if lightgbm_params is not None and not isinstance(lightgbm_params, dict):
+        logger.error("Invalid lightgbm_params type: %s", type(lightgbm_params))
         raise TypeError("lightgbm_params must be a dictionary or None")
 
     # Допустимые значения дополнительных аргументов
     if max_samples <= 0:
+        logger.error("max_samples must be positive, got %d", max_samples)
         raise ValueError(f"max_samples must be positive, got {max_samples}")
     if n_splits < 2:
+        logger.error("n_splits must be at least 2, got %d", n_splits)
         raise ValueError(f"n_splits must be at least 2, got {n_splits}")
     if not missing_category:
+        logger.error("missing_category must not be empty")
         raise ValueError("missing_category must not be empty")
 
     # Проверка достаточности размера выборок для кросс-валидации
     sample_size = min(len(reference), len(current), max_samples)
     if sample_size < n_splits:
+        logger.error(
+            "Insufficient sample size (%d) for %d-fold validation",
+            sample_size,
+            n_splits,
+        )
         raise ValueError(
             f"each dataset must contain at least {n_splits} rows for "
             f"{n_splits}-fold validation"
@@ -236,6 +300,7 @@ def _prepare_features(
         dtype = reference[column].dtype
 
         if is_numeric_dtype(dtype) and not is_bool_dtype(dtype) and dtype.kind != "c":
+            logger.debug("Column '%s': treated as numeric (%s)", column, dtype)
             prepared[column] = pd.to_numeric(prepared[column], errors="coerce")
             prepared[column] = prepared[column].replace([np.inf, -np.inf], np.nan)
             continue
@@ -246,6 +311,7 @@ def _prepare_features(
             or is_string_dtype(dtype)
             or isinstance(dtype, pd.CategoricalDtype)
         ):
+            logger.debug("Column '%s': treated as categorical (%s)", column, dtype)
             prepared[column] = (
                 prepared[column]
                 .astype("string")
@@ -254,6 +320,7 @@ def _prepare_features(
             )
             continue
 
+        logger.error("Column '%s' has unsupported dtype: %s", column, dtype)
         raise TypeError(f"unsupported feature dtype: {column} ({dtype})")
 
     return prepared

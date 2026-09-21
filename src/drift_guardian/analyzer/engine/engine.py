@@ -4,10 +4,14 @@ from src.drift_guardian.schema.models import ReferenceDict, MetricFn
 from config.parse_config import Metric
 from src.drift_guardian.analyzer.utils import find_ref
 
+import logging
 from typing import Any
 from datetime import datetime, timezone
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
+
 
 class DriftMetricsEngine:
     def __init__(self, config, reference_profile: ReferenceDict):
@@ -16,8 +20,18 @@ class DriftMetricsEngine:
 
         self.window_size = None
 
+        logger.debug(
+            "DriftMetricsEngine initialized with %d configured features",
+            len(getattr(config, "features", {}) or {}),
+        )
+
     def analyze_dataframe(self, current: pd.DataFrame):
         self.window_size = len(current)
+
+        logger.info(
+            "Starting drift analysis on current window (size=%d)",
+            self.window_size,
+        )
 
         config = self.config
         reference_dict = self.reference_dict
@@ -25,15 +39,25 @@ class DriftMetricsEngine:
         feature_results = {}
 
         for feature in config.features:
+            logger.debug("Analyzing feature column '%s'", feature)
             feature_result = self._analyze_column(reference_dict, current[feature], config)
             feature_results[feature] = feature_result
 
         prediction_result = None
         if config.prediction_metrics.enabled:
             prediction_column = config.prediction_metrics.score_column
+            logger.debug("Analyzing prediction column '%s'", prediction_column)
             prediction_result = self._analyze_column(reference_dict, current[prediction_column], config, 'prediction')
 
-        return self._make_report(feature_results, prediction_result)
+        report = self._make_report(feature_results, prediction_result)
+
+        logger.info(
+            "Drift analysis completed: overall_status=%s, active_alerts=%d",
+            report.get("overall_status"),
+            report.get("active_alerts"),
+        )
+
+        return report
 
     def run_adversarial_validation(self,
                                    current: pd.DataFrame,
@@ -43,6 +67,11 @@ class DriftMetricsEngine:
                                    missing_category: str = "__missing__",
                                    lightgbm_params: dict[str, Any] | None = None,):
 
+        logger.info(
+            "Starting adversarial validation (max_samples=%d, n_splits=%d, random_state=%d)",
+            max_samples, n_splits, random_state,
+        )
+
         sample_df = self.reference_dict['sample']
         av_results = adversarial_validation(sample_df,
                                            current,
@@ -51,6 +80,9 @@ class DriftMetricsEngine:
                                            random_state=random_state,
                                            missing_category=missing_category,
                                            lightgbm_params=lightgbm_params)
+
+        logger.info("Adversarial validation completed")
+        logger.debug("Adversarial validation results: %s", av_results)
 
         return av_results
 
@@ -72,6 +104,7 @@ class DriftMetricsEngine:
                 metrics = config.prediction_metrics.metrics
                 resolved_thresholds = config.prediction_metrics.resolved_thresholds
             else:
+                logger.error("Invalid column_type '%s' provided for column '%s'", column_type, column_name)
                 raise ValueError(f"column_type must be feature or prediction, got {column_type}")
 
             for metric in metrics:
@@ -83,6 +116,17 @@ class DriftMetricsEngine:
 
                 metric_status  = self._get_metric_status(thresh_warning, thresh_critical, value)
 
+                if metric_status != "ok":
+                    logger.warning(
+                        "Column '%s': metric '%s' status=%s (value=%.4f, warning=%.4f, critical=%.4f)",
+                        column_name, metric.value, metric_status, value, thresh_warning, thresh_critical,
+                    )
+                else:
+                    logger.debug(
+                        "Column '%s': metric '%s' status=ok (value=%.4f)",
+                        column_name, metric.value, value,
+                    )
+
                 metrics_result[metric.value] = {
                     "value": value,
                     "warning": thresh_warning,
@@ -90,6 +134,9 @@ class DriftMetricsEngine:
                     "status": metric_status
                 }
             feature_status = self._get_feature_status(metrics_result)
+
+            if feature_status != "ok":
+                logger.warning("Column '%s' overall status=%s", column_name, feature_status)
 
             column_result['status'] = feature_status
             column_result['metrics'] = metrics_result
@@ -131,6 +178,11 @@ class DriftMetricsEngine:
     def _make_report(self, monitoring_features_results: dict, monitoring_prediction_result: dict):
         overall_status, active_alerts = self._get_overall_status(monitoring_features_results)
 
+        logger.debug(
+            "Building report: overall_status=%s, active_alerts=%d, has_prediction=%s",
+            overall_status, active_alerts, monitoring_prediction_result is not None,
+        )
+
         if monitoring_prediction_result is not None:
             report = {'timestamp': self._get_current_timestamp(),
                       'window_size': self.window_size,
@@ -158,6 +210,7 @@ class DriftMetricsEngine:
             if feature_status == 'critical':
                 overall_status = 'critical'
                 active_alerts += 1
+                logger.warning("Feature '%s' triggered a critical alert", feature)
             if overall_status != 'critical' and feature_status == 'warning':
                 overall_status = 'warning'
 
