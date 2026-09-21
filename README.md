@@ -70,7 +70,7 @@ uv sync --group notebooks
 
 ```powershell
 uv run python -m compileall -q src tests monitoring/mock_exporter
-uv run python -m unittest discover -s tests -v
+uv run python -m pytest -q
 ```
 
 Тесты покрывают контракт событий, `SchemaChecker`, reference sampling,
@@ -134,16 +134,45 @@ Prometheus contract и Grafana provisioning.
 
 ```text
 drift_window_size
+drift_current_window_events
 drift_events_processed_total
 drift_analysis_runs_total
 drift_last_analysis_age_seconds
 ```
 
-Количество событий в текущем незавершённом окне можно оценить как:
+Количество событий в текущем окне публикуется напрямую из фактического
+состояния `WindowBuffer`:
 
 ```promql
-drift_events_processed_total - drift_analysis_runs_total * drift_window_size
+drift_current_window_events
 ```
+
+После добавления принятого события Gauge получает `len(window)`. После
+успешного анализа, синхронного commit и очистки окна он сбрасывается в `0`.
+Если анализ или commit завершается ошибкой, Gauge сохраняет фактический размер
+неочищенного окна.
+
+## Счётчики и выбранный период
+
+Счётчики `drift_events_processed_total`, `drift_analysis_runs_total`,
+`drift_out_of_order_events_total` и `drift_late_events_total` считаются с
+момента запуска текущего exporter/analyzer. После перезапуска процесса они
+начинаются с нуля. Это представление **Since exporter start**.
+
+Для **Over Selected Period** Grafana считает прирост каждого Counter за
+выбранный диапазон. `increase()` учитывает сбросы Counter при перезапусках,
+`sum()` объединяет временные ряды, а округление выполняется после суммирования:
+
+```promql
+round(sum(increase(drift_events_processed_total[$__range]))) or on() vector(0)
+round(sum(increase(drift_analysis_runs_total[$__range]))) or on() vector(0)
+round(sum(increase(drift_out_of_order_events_total[$__range]))) or on() vector(0)
+round(sum(increase(drift_late_events_total[$__range]))) or on() vector(0)
+```
+
+Поэтому значение за выбранный период может быть больше текущего значения
+`Since exporter start`, если диапазон включает события до последнего перезапуска
+или несколько временных рядов.
 
 ## Drift report и Prometheus
 
@@ -301,6 +330,7 @@ drift_event_time_lag_seconds
 drift_window_time_span_seconds
 drift_max_event_gap_seconds
 drift_invalid_event_time_rate
+drift_late_event_rate
 drift_late_events_total
 drift_out_of_order_events_total
 drift_stream_threshold{metric,level}
@@ -311,7 +341,22 @@ drift_stream_threshold{metric,level}
 как диагностика.
 
 До первого успешно завершённого окна статус равен `-1`. После этого выбирается
-наихудший статус среди настроенных stream-метрик.
+наихудший статус среди настроенных stream-метрик. В текущей конфигурации статус
+учитывает lag последнего события и долю late-событий текущего окна. Накопительный
+`drift_late_events_total` остаётся диагностическим Counter и не может навсегда
+зафиксировать статус в `critical`.
+
+В начале каждого нового окна обнуляются
+`drift_window_time_span_seconds`, `drift_max_event_gap_seconds`,
+`drift_invalid_event_time_rate` и `drift_late_event_rate`. Эти значения
+публикуются сразу после очистки завершённого окна. `drift_event_time_lag_seconds`
+обновляется при каждом валидном событии как разница между временем обработки и
+его `event_time`.
+
+`drift_late_event_rate` — доля late-событий среди валидных событий текущего
+окна. Именно она участвует в расчёте `drift_stream_status`; накопительный
+`drift_late_events_total` остаётся диагностическим Counter и не может навсегда
+зафиксировать статус `critical`.
 
 В Grafana используется mapping:
 
@@ -456,13 +501,15 @@ docker compose logs --tail=100 analyzer
 
 ```powershell
 curl.exe -s http://localhost:8000/metrics |
-  Select-String "drift_events_processed_total|drift_analysis_runs_total|drift_stream_status|drift_av_roc_auc"
+  Select-String "drift_current_window_events|drift_window_size|drift_events_processed_total|drift_analysis_runs_total|drift_stream_status|drift_av_roc_auc"
 ```
 
 После первого полного окна:
 
 - `drift_events_processed_total` должен быть больше `0`;
 - `drift_analysis_runs_total` должен быть больше `0`;
+- `drift_current_window_events` должен находиться в диапазоне от `0` до
+  `drift_window_size` и сбрасываться после полного окна;
 - `drift_av_available` должен стать `1`, если AV включён;
 - `drift_av_feature_importance` должен содержать хотя бы один признак;
 - targets Prometheus `prometheus` и `drift-exporter` должны быть `UP`.
@@ -489,6 +536,6 @@ docker compose --profile mock down --remove-orphans
 uv lock --check
 uv sync --frozen
 uv run python -m compileall -q src tests monitoring/mock_exporter
-uv run python -m unittest discover -s tests -v
+uv run python -m pytest -q
 git -c core.whitespace=cr-at-eol diff --check
 ```
