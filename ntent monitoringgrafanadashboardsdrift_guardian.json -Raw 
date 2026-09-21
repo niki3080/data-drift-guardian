@@ -1,0 +1,11 @@
+ README.md                                          |    30 [32m+[m[31m-[m
+ config/config.yaml                                 |     6 [32m+[m[31m-[m
+ monitoring/grafana/dashboards/drift_guardian.json  | 17326 [32m+++++++++++[m[31m--------[m
+ monitoring/mock_exporter/app.py                    |    51 [32m+[m[31m-[m
+ src/drift_guardian/core/parse_config.py            |     7 [32m+[m[31m-[m
+ .../exporters/prometheus_exporter.py               |    18 [32m+[m
+ src/drift_guardian/ingestion/consumer.py           |     8 [32m+[m
+ src/drift_guardian/ingestion/stream_metrics.py     |    35 [32m+[m[31m-[m
+ tests/test_ingestion.py                            |    63 [32m+[m[31m-[m
+ tests/test_monitoring_contract.py                  |    65 [32m+[m[31m-[m
+ 10 files changed, 10717 insertions(+), 6892 deletions(-)
