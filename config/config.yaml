@@ -57,8 +57,8 @@ stream_drift:
   drift_event_time_lag_seconds:
     warning: 30
     critical: 120
-  drift_late_events_total:
-    warning: 10
-    critical: 50
+  drift_late_event_rate:
+    warning: 0.01
+    critical: 0.05
   # остальные поля не заданы — значит не мониторятся
 

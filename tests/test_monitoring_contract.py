@@ -11,7 +11,12 @@ import pytest
 import yaml
 from prometheus_client import CollectorRegistry, generate_latest
 
-from drift_guardian.core.parse_config import Config, Metric, read_config
+from drift_guardian.core.parse_config import (
+    Config,
+    Metric,
+    StreamDriftConfig,
+    read_config,
+)
 from drift_guardian.exporters.prometheus_exporter import PrometheusExporter
 from drift_guardian.ingestion.stream_metrics import load_stream_thresholds
 
@@ -114,7 +119,8 @@ def test_dashboard_is_provisioned_with_matching_datasource() -> None:
             encoding="utf-8"
         )
     )
-    assert dashboard['spec']['title'] == 'Data Drift Guardian v2.2'
+    assert dashboard['spec']['title'] == 'Data Drift Guardian v2.3'
+    assert len(dashboard['spec']['elements']) == 33
     assert dashboard['apiVersion'] == 'dashboard.grafana.app/v2'
     assert dashboard['kind'] == 'Dashboard'
     assert 'Grafana v13.2.1' in dashboard['metadata']['annotations']['grafana.app/saved-from-ui']
@@ -213,6 +219,8 @@ def test_exporter_registers_every_metric_used_by_dashboard() -> None:
         "drift_av_features_evaluated",
         "drift_av_sample_fraction",
         "drift_av_threshold",
+        "drift_current_window_events",
+        "drift_event_time_lag_seconds",
         "drift_events_processed_total",
         "drift_invalid_event_time_rate",
         "drift_late_events_total",
@@ -232,6 +240,119 @@ def test_exporter_registers_every_metric_used_by_dashboard() -> None:
     assert dashboard_metrics == expected_metrics
     assert dashboard_metrics - registered_metrics == set()
 
+
+def test_dashboard_uses_direct_window_metric() -> None:
+    dashboard_path = (
+        ROOT / "monitoring/grafana/dashboards/drift_guardian.json"
+    )
+    dashboard_text = dashboard_path.read_text(encoding="utf-8")
+    dashboard = json.loads(dashboard_text)
+    elements = dashboard["spec"]["elements"]
+
+    assert "drift_current_window_events" in dashboard_text
+    assert "drift_late_event_rate" not in dashboard_text
+    assert "drift_events_processed_total % drift_window_size" not in dashboard_text
+    assert "# approximation" not in dashboard_text
+    assert (
+        "floor(drift_events_processed_total / drift_window_size)"
+        not in dashboard_text
+    )
+    assert "sum(round(increase" not in dashboard_text
+
+    for metric in (
+        "drift_events_processed_total",
+        "drift_analysis_runs_total",
+        "drift_out_of_order_events_total",
+        "drift_late_events_total",
+    ):
+        assert f"round(sum(increase({metric}[$__range])))" in dashboard_text
+
+    readiness_queries = {
+        query["spec"]["query"]["spec"]["legendFormat"]: query["spec"]
+        ["query"]["spec"]["expr"]
+        for query in elements["panel-27"]["spec"]["data"]["spec"]["queries"]
+    }
+    assert readiness_queries["calculated_window_fill"].startswith(
+        "max(drift_current_window_events)"
+    )
+    assert "max(drift_current_window_events)" in readiness_queries[
+        "calculated_window_fill_percent"
+    ]
+    assert "max(drift_current_window_events)" in readiness_queries[
+        "calculated_ETA"
+    ]
+
+    quality_panel = elements["panel-110"]["spec"]
+    quality_queries = {
+        query["spec"]["query"]["spec"]["legendFormat"]: query["spec"]
+        ["query"]["spec"]["expr"]
+        for query in quality_panel["data"]["spec"]["queries"]
+    }
+    assert quality_queries == {
+        "invalid_event_time_rate": (
+            "drift_invalid_event_time_rate or on() vector(-999)"
+        ),
+    }
+    quality_canvas = json.dumps(quality_panel["vizConfig"], ensure_ascii=False)
+    assert '"field": "late_event_rate"' not in quality_canvas
+    assert '"fixed": "Late event rate"' not in quality_canvas
+    quality_elements = quality_panel["vizConfig"]["spec"]["options"]["root"][
+        "elements"
+    ]
+    invalid_label = next(
+        element
+        for element in quality_elements
+        if element["name"] == "invalid_event_time_rate label"
+    )
+    assert invalid_label["config"]["size"] == 12
+
+    since_start_queries = elements["panel-58"]["spec"]["data"]["spec"][
+        "queries"
+    ]
+    assert [
+        query["spec"]["query"]["spec"]["legendFormat"]
+        for query in since_start_queries
+    ] == [
+        "events_processed_total",
+        "analysis_runs",
+        "out_of_order_events_total",
+        "late_events",
+    ]
+    assert "process_start_time" not in {
+        query["spec"]["query"]["spec"]["legendFormat"]
+        for query in since_start_queries
+    }
+
+
+def test_dashboard_process_start_is_scoped_to_drift_exporter() -> None:
+    dashboard = json.loads(
+        (ROOT / "monitoring/grafana/dashboards/drift_guardian.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    rows = dashboard["spec"]["layout"]["spec"]["rows"]
+    stream_row = next(
+        row["spec"]
+        for row in rows
+        if any(
+            variable["spec"]["name"] == "process_start_time_s"
+            for variable in row["spec"].get("variables", [])
+        )
+    )
+    process_start = next(
+        variable["spec"]
+        for variable in stream_row["variables"]
+        if variable["spec"]["name"] == "process_start_time_s"
+    )
+    expected_query = (
+        'query_result(max(process_start_time_seconds{job="drift-exporter"}) '
+        "* 1000)"
+    )
+
+    assert process_start["query"]["spec"]["query"] == expected_query
+    assert process_start["definition"] == expected_query
+
+
 def test_dashboard_contains_conditional_av_row_with_agreed_metrics() -> None:
     dashboard = json.loads(
         (ROOT / "monitoring/grafana/dashboards/drift_guardian.json").read_text(
@@ -241,7 +362,9 @@ def test_dashboard_contains_conditional_av_row_with_agreed_metrics() -> None:
     rows = dashboard["spec"]["layout"]["spec"]["rows"]
     av_row = next(
         row for row in rows
-        if row.get("spec", {}).get("title") == "Adversarial Validation"
+        if row.get("spec", {}).get("title", "").startswith(
+            "Adversarial Validation"
+        )
     )
     conditional = av_row["spec"]["conditionalRendering"]["spec"]
     assert conditional['visibility'] == 'show'
@@ -282,7 +405,7 @@ def test_av_dashboard_matches_main_dashboard_layout() -> None:
     assert 'Reference and current are similar' not in summary_text
 
     for panel_name, metric in (
-        ("panel-95", "drift_av_roc_auc"),
+        ("panel-101", "drift_av_roc_auc"),
         ("panel-98", "drift_av_roc_auc_cv_min"),
         ("panel-96", "drift_av_roc_auc_cv_std"),
         ("panel-99", "drift_av_driver_consistency"),
@@ -341,14 +464,23 @@ def test_av_dashboard_matches_main_dashboard_layout() -> None:
     rows = dashboard["spec"]["layout"]["spec"]["rows"]
     av_row = next(
         row for row in rows
-        if row.get("spec", {}).get("title") == "Adversarial Validation"
+        if row.get("spec", {}).get("title", "").startswith(
+            "Adversarial Validation"
+        )
     )
     nested_rows = av_row["spec"]["layout"]["spec"]["rows"]
     latest_items = nested_rows[0]["spec"]["layout"]["spec"]["items"]
     latest_names = [item["spec"]["element"]["name"] for item in latest_items]
-    assert latest_names == ['panel-92', 'panel-95', 'panel-98', 'panel-96', 'panel-99', 'panel-97']
+    assert latest_names == [
+        'panel-92',
+        'panel-101',
+        'panel-98',
+        'panel-96',
+        'panel-99',
+        'panel-97',
+    ]
     assert len(nested_rows[1]['spec']['layout']['spec']['items']) == 2
-    assert nested_rows[1]['spec']['layout']['spec']['items'][0]['spec']['height'] == 12
+    assert nested_rows[1]['spec']['layout']['spec']['items'][0]['spec']['height'] == 9
     assert nested_rows[2]['spec']['title'] == 'AV Status Over Time'
     assert nested_rows[0]['spec']['layout']['kind'] == 'GridLayout'
     top_items = nested_rows[0]["spec"]["layout"]["spec"]["items"]
@@ -369,12 +501,20 @@ def test_status_timelines_preserve_all_status_codes_and_av_samples() -> None:
     elements = dashboard["spec"]["elements"]
 
     stream_history = elements["panel-91"]["spec"]
-    stream_mapping = (
-        stream_history["vizConfig"]["spec"]["fieldConfig"]["defaults"]
-        ["mappings"][0]["options"]
+    stream_override = next(
+        override
+        for override in stream_history["vizConfig"]["spec"]["fieldConfig"][
+            "overrides"
+        ]
+        if override["matcher"].get("options") == "Stream status"
+    )
+    stream_mapping = next(
+        prop["value"][0]["options"]
+        for prop in stream_override["properties"]
+        if prop["id"] == "mappings"
     )
     assert stream_mapping['-1']['text'] == 'Not ready'
-    assert stream_mapping['-1']['color'] == '#ccccdb4d'
+    assert stream_mapping['-1']['color'] == '#ccccdb80'
     assert stream_mapping['0']['text'] == 'Healthy'
     assert stream_mapping['1']['text'] == 'Degraded'
     assert stream_mapping['2']['text'] == 'Unhealthy'
@@ -382,7 +522,7 @@ def test_status_timelines_preserve_all_status_codes_and_av_samples() -> None:
 
     av_history = elements["panel-94"]["spec"]
     av_query = av_history["data"]["spec"]["queries"][0]["spec"]["query"]["spec"]
-    assert av_query['expr'] == 'drift_av_status'
+    assert av_query['expr'] == 'max(drift_av_status)'
     assert av_query['range']
     assert not av_query['instant']
     assert 'max_over_time' not in av_query['expr']
@@ -416,7 +556,10 @@ def test_threshold_contract_is_present_in_runtime_config() -> None:
     )
     assert config['features']['age']['thresholds']['psi'] == {'warning': 0.05, 'critical': 0.12}
     assert config['thresholds']['missing_rate'] == {'warning': 0.02, 'critical': 0.05}
-    assert config['stream_drift'] == {'drift_event_time_lag_seconds': {'warning': 30, 'critical': 120}, 'drift_late_events_total': {'warning': 10, 'critical': 50}}
+    assert config['stream_drift'] == {
+        'drift_event_time_lag_seconds': {'warning': 30, 'critical': 120},
+        'drift_late_event_rate': {'warning': 0.01, 'critical': 0.05},
+    }
     assert config['adversarial_validation'] == {'enabled': True, 'thresholds': {'warning': 0.6, 'critical': 0.75}}
 
     parsed = read_config(ROOT / "config/config.yaml")
@@ -425,10 +568,18 @@ def test_threshold_contract_is_present_in_runtime_config() -> None:
     assert parsed.adversarial_validation.thresholds.critical == 0.75
     assert parsed.features['age'].resolved_thresholds[Metric.psi].warning == 0.05
     assert parsed.features['income'].resolved_thresholds[Metric.psi].warning == 0.1
-    assert parsed.stream_drift.drift_late_events_total.critical == 50
+    assert parsed.stream_drift.drift_late_event_rate.critical == 0.05
 
     stream_thresholds = load_stream_thresholds(ROOT / "config/config.yaml")
-    assert set(stream_thresholds.as_dict()) == {'drift_event_time_lag_seconds', 'drift_late_events_total'}
+    assert set(stream_thresholds.as_dict()) == {
+        'drift_event_time_lag_seconds',
+        'drift_late_event_rate',
+    }
+
+    with pytest.raises(ValueError, match="drift_late_events_total"):
+        StreamDriftConfig(
+            drift_late_events_total={"warning": 10, "critical": 50}
+        )
 
 def test_global_threshold_is_not_overwritten_by_feature_override() -> None:
     registry = CollectorRegistry()
@@ -577,6 +728,156 @@ print(json.dumps([first, second, third]))
     assert 'drift_av_top1_importance_share 0.29' in first
     assert 'drift_av_top3_importance_share 0.64' in first
     assert 'drift_av_dataset_size 1000.0' in first
+    assert "drift_current_window_events 0.0" in first
+    assert "drift_late_event_rate 0.0" in first
+    assert (
+        'drift_stream_threshold{level="warning",'
+        'metric="drift_late_event_rate"} 0.01'
+        in first
+    )
+
+
+def test_mock_late_counter_and_window_rate_use_the_same_events() -> None:
+    script = r"""
+import importlib.util
+import json
+import random
+import re
+from pathlib import Path
+from prometheus_client import REGISTRY, generate_latest
+
+module_path = Path("monitoring/mock_exporter/app.py")
+spec = importlib.util.spec_from_file_location("mock_stream_test", module_path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+rng = random.Random(0)
+
+def snapshot():
+    exposition = generate_latest(REGISTRY).decode("utf-8")
+    def value(metric):
+        match = re.search(rf"^{metric} ([^\\n]+)$", exposition, re.M)
+        return float(match.group(1))
+    return {
+        "late_total": value("drift_late_events_total"),
+        "late_rate": value("drift_late_event_rate"),
+        "out_of_order_total": value("drift_out_of_order_events_total"),
+        "status": value("drift_stream_status"),
+    }
+
+window_late_events = 0
+for tick in range(1, 101):
+    window_late_events = module.update_stream_health(
+        1,
+        tick,
+        rng,
+        window_events_count=tick,
+        window_late_events=window_late_events,
+    )
+warning = snapshot()
+
+window_late_events = 0
+for tick in range(101, 201):
+    window_late_events = module.update_stream_health(
+        2,
+        tick,
+        rng,
+        window_events_count=tick - 100,
+        window_late_events=window_late_events,
+    )
+critical = snapshot()
+
+module.update_stream_health(
+    0,
+    201,
+    rng,
+    window_events_count=1,
+    window_late_events=0,
+)
+normal = snapshot()
+print(json.dumps([warning, critical, normal]))
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    warning, critical, normal = json.loads(completed.stdout)
+
+    assert warning == {
+        "late_total": 2.0,
+        "late_rate": 0.02,
+        "out_of_order_total": 1.0,
+        "status": 1.0,
+    }
+    assert critical == {
+        "late_total": 10.0,
+        "late_rate": 0.08,
+        "out_of_order_total": 5.0,
+        "status": 2.0,
+    }
+    assert normal == {
+        "late_total": 10.0,
+        "late_rate": 0.0,
+        "out_of_order_total": 5.0,
+        "status": 0.0,
+    }
+
+
+def test_mock_max_event_gap_never_exceeds_current_window_span() -> None:
+    script = r"""
+import importlib.util
+import json
+import random
+from pathlib import Path
+
+module_path = Path("monitoring/mock_exporter/app.py")
+spec = importlib.util.spec_from_file_location("mock_timing_test", module_path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+rng = random.Random(0)
+
+results = []
+for status in (-1, 0, 1, 2):
+    current_max_gap = 0.0
+    previous_span = 0.0
+    previous_max_gap = 0.0
+    for window_events_count in range(1, module.WINDOW_SIZE + 1):
+        span, current_max_gap = module.update_window_timing(
+            status,
+            rng,
+            window_events_count=window_events_count,
+            window_max_event_gap=current_max_gap,
+        )
+        assert 0 <= current_max_gap <= span
+        assert current_max_gap >= previous_max_gap
+        assert span >= previous_span
+        previous_span = span
+        previous_max_gap = current_max_gap
+    results.append({"status": status, "span": span, "gap": current_max_gap})
+
+module.window_time_span_seconds.set(0)
+module.max_event_gap_seconds.set(0)
+results.append({
+    "span": module.window_time_span_seconds._value.get(),
+    "gap": module.max_event_gap_seconds._value.get(),
+})
+print(json.dumps(results))
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    *windows, reset = json.loads(completed.stdout)
+
+    assert all(window["gap"] <= window["span"] for window in windows)
+    assert windows[-1]["gap"] >= 8.0
+    assert reset == {"span": 0.0, "gap": 0.0}
+
 
 def test_mock_exporter_exposes_every_dashboard_metric() -> None:
     module_path = ROOT / "monitoring/mock_exporter/app.py"

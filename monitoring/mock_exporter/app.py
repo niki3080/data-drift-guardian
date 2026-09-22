@@ -21,6 +21,14 @@ ANALYSIS_SEQUENCE = 0
 PREVIOUS_AV_IMPORTANCE: dict[str, float] = {}
 AV_WARNING_AUC = 0.60
 AV_CRITICAL_AUC = 0.75
+STREAM_LAG_WARNING_SECONDS = 30
+STREAM_LAG_CRITICAL_SECONDS = 120
+STREAM_LATE_RATE_WARNING = 0.01
+STREAM_LATE_RATE_CRITICAL = 0.05
+WARNING_LATE_EVENT_INTERVAL = 40
+CRITICAL_LATE_EVENT_INTERVAL = 12
+WARNING_OUT_OF_ORDER_EVENT_INTERVAL = 100
+CRITICAL_OUT_OF_ORDER_EVENT_INTERVAL = 25
 
 
 # Глобальные метрики
@@ -37,6 +45,11 @@ active_alerts = Gauge(
 window_size = Gauge(
     "drift_window_size",
     "Configured number of events in each analysis window",
+)
+
+current_window_events = Gauge(
+    "drift_current_window_events",
+    "Number of events currently collected in the analysis window",
 )
 
 analysis_runs = Counter(
@@ -66,6 +79,7 @@ reference_profile_info.info(
 )
 
 window_size.set(WINDOW_SIZE)
+current_window_events.set(0)
 last_analysis_age_seconds.set(-1)
 
 events_processed = Counter(
@@ -97,6 +111,33 @@ invalid_event_time_rate = Gauge(
     "drift_invalid_event_time_rate",
     "Fraction of events in the current window with an invalid event time",
 )
+
+late_event_rate = Gauge(
+    "drift_late_event_rate",
+    "Fraction of late events in the current analysis window",
+)
+
+stream_threshold = Gauge(
+    "drift_stream_threshold",
+    "Configured warning and critical stream-quality thresholds",
+    ["metric", "level"],
+)
+stream_threshold.labels(
+    metric="drift_event_time_lag_seconds",
+    level="warning",
+).set(STREAM_LAG_WARNING_SECONDS)
+stream_threshold.labels(
+    metric="drift_event_time_lag_seconds",
+    level="critical",
+).set(STREAM_LAG_CRITICAL_SECONDS)
+stream_threshold.labels(
+    metric="drift_late_event_rate",
+    level="warning",
+).set(STREAM_LATE_RATE_WARNING)
+stream_threshold.labels(
+    metric="drift_late_event_rate",
+    level="critical",
+).set(STREAM_LATE_RATE_CRITICAL)
 
 late_events = Counter(
     "drift_late_events",
@@ -655,38 +696,82 @@ def current_stream_state(seconds_since_full: float) -> int:
     return 2
 
 
+def update_window_timing(
+    status: int,
+    rng: random.Random,
+    *,
+    window_events_count: int,
+    window_max_event_gap: float,
+) -> tuple[float, float]:
+    """Обновляет согласованные span и max gap текущего demo-окна."""
+
+    candidate_gap = 0.0
+    if window_events_count > 1:
+        if status <= 0:
+            candidate_gap = rng.uniform(0.5, 2.0)
+        elif status == 1:
+            candidate_gap = rng.uniform(2.0, 6.0)
+        else:
+            candidate_gap = rng.uniform(8.0, 20.0)
+
+    current_max_gap = max(window_max_event_gap, candidate_gap)
+    nominal_span = (window_events_count - 1) * EVENT_INTERVAL_SECONDS
+    current_span = nominal_span + max(
+        current_max_gap - EVENT_INTERVAL_SECONDS,
+        0.0,
+    )
+
+    window_time_span_seconds.set(current_span)
+    max_event_gap_seconds.set(current_max_gap)
+    return current_span, current_max_gap
+
+
 def update_stream_health(
     status: int,
     tick: int,
     rng: random.Random,
-) -> None:
-    """Обновляет технические stream-метрики для одного demo-события."""
-
-    stream_status.set(status)
+    *,
+    window_events_count: int,
+    window_late_events: int,
+) -> int:
+    """Обновляет stream-метрики и возвращает число late-событий окна."""
 
     if status <= 0:
         event_time_lag_seconds.set(rng.uniform(0.0, 3.0))
-        max_event_gap_seconds.set(rng.uniform(0.5, 2.0))
         invalid_event_time_rate.set(0)
-        return
-
-    if status == 1:
-        event_time_lag_seconds.set(rng.uniform(5.0, 12.0))
-        max_event_gap_seconds.set(rng.uniform(2.0, 6.0))
+        is_late = False
+        is_out_of_order = False
+    elif status == 1:
+        event_time_lag_seconds.set(rng.uniform(35.0, 90.0))
         invalid_event_time_rate.set(0.01 if tick % 20 < 4 else 0)
-        if tick % 10 == 0:
-            late_events.inc()
-        if tick % 30 == 0:
-            out_of_order_events.inc()
-        return
+        is_late = tick % WARNING_LATE_EVENT_INTERVAL == 0
+        is_out_of_order = tick % WARNING_OUT_OF_ORDER_EVENT_INTERVAL == 0
+    else:
+        event_time_lag_seconds.set(rng.uniform(130.0, 240.0))
+        invalid_event_time_rate.set(rng.uniform(0.03, 0.08))
+        is_late = tick % CRITICAL_LATE_EVENT_INTERVAL == 0
+        is_out_of_order = (
+            tick % CRITICAL_OUT_OF_ORDER_EVENT_INTERVAL == 0
+        )
 
-    event_time_lag_seconds.set(rng.uniform(20.0, 45.0))
-    max_event_gap_seconds.set(rng.uniform(8.0, 20.0))
-    invalid_event_time_rate.set(rng.uniform(0.03, 0.08))
-    if tick % 4 == 0:
+    if is_late:
         late_events.inc()
-    if tick % 8 == 0:
+        window_late_events += 1
+    if is_out_of_order:
         out_of_order_events.inc()
+
+    current_late_rate = window_late_events / window_events_count
+    late_event_rate.set(current_late_rate)
+
+    calculated_status = status
+    if status >= 0:
+        if current_late_rate >= STREAM_LATE_RATE_CRITICAL:
+            calculated_status = max(calculated_status, 2)
+        elif current_late_rate >= STREAM_LATE_RATE_WARNING:
+            calculated_status = max(calculated_status, 1)
+    stream_status.set(calculated_status)
+
+    return window_late_events
 
 
 def simulate_event_stream() -> None:
@@ -694,6 +779,8 @@ def simulate_event_stream() -> None:
 
     rng = random.Random()
     current_window_size = 0
+    current_window_late_events = 0
+    current_window_max_event_gap = 0.0
     tick = 0
     first_analysis_at: float | None = None
     last_analysis_at: float | None = None
@@ -702,19 +789,38 @@ def simulate_event_stream() -> None:
     event_time_lag_seconds.set(0)
     max_event_gap_seconds.set(0)
     invalid_event_time_rate.set(0)
+    late_event_rate.set(0)
+    current_window_events.set(0)
     set_insufficient_data()
 
     while True:
         tick += 1
         events_processed.inc()
         current_window_size += 1
+        current_window_events.set(current_window_size)
         now = time.monotonic()
-        window_time_span_seconds.set(
-            (current_window_size - 1) * EVENT_INTERVAL_SECONDS
-        )
 
         if last_analysis_at is not None:
             last_analysis_age_seconds.set(now - last_analysis_at)
+
+        if first_analysis_at is None:
+            status = -1
+        else:
+            status = current_stream_state(now - first_analysis_at)
+
+        _, current_window_max_event_gap = update_window_timing(
+            status,
+            rng,
+            window_events_count=current_window_size,
+            window_max_event_gap=current_window_max_event_gap,
+        )
+        current_window_late_events = update_stream_health(
+            status,
+            tick,
+            rng,
+            window_events_count=current_window_size,
+            window_late_events=current_window_late_events,
+        )
 
         if current_window_size == WINDOW_SIZE:
             set_critical_scenario()
@@ -724,12 +830,13 @@ def simulate_event_stream() -> None:
             if first_analysis_at is None:
                 first_analysis_at = now
             current_window_size = 0
-
-        if first_analysis_at is None:
-            update_stream_health(-1, tick, rng)
-        else:
-            status = current_stream_state(now - first_analysis_at)
-            update_stream_health(status, tick, rng)
+            current_window_late_events = 0
+            current_window_max_event_gap = 0.0
+            current_window_events.set(0)
+            window_time_span_seconds.set(0)
+            max_event_gap_seconds.set(0)
+            invalid_event_time_rate.set(0)
+            late_event_rate.set(0)
 
         time.sleep(EVENT_INTERVAL_SECONDS)
 

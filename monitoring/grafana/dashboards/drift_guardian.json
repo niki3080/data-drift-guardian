@@ -4,18 +4,24 @@
   "metadata": {
     "name": "ad42z5h",
     "namespace": "default",
-    "uid": "f56537e1-b5a9-42c9-835a-a44d26fa3c17",
-    "resourceVersion": "1790023065900014",
-    "generation": 46,
-    "creationTimestamp": "2026-09-20T14:56:12Z",
+    "uid": "54a319ad-2d73-4176-a384-4e61cd3b16af",
+    "resourceVersion": "1790071054188989",
+    "generation": 14,
+    "creationTimestamp": "2026-09-21T20:38:49Z",
     "labels": {
-      "grafana.app/deprecatedInternalID": "2976159194079232"
+      "grafana.app/deprecatedInternalID": "3458055368462336"
     },
     "annotations": {
-      "grafana.app/createdBy": "user:ffxsix44g20owe",
+      "grafana.app/createdBy": "access-policy:service",
+      "grafana.app/managedBy": "classic-file-provisioning",
+      "grafana.app/managerAllowsEdits": "true",
+      "grafana.app/managerId": "drift-guardian",
       "grafana.app/saved-from-ui": "Grafana v13.2.1 (56cd3e9288)",
+      "grafana.app/sourceChecksum": "a89217a94c16f3b9a597d4baff954fa5",
+      "grafana.app/sourcePath": "/var/lib/grafana/dashboards/drift_guardian.json",
+      "grafana.app/sourceTimestamp": "1790023072000",
       "grafana.app/updatedBy": "user:ffxsix44g20owe",
-      "grafana.app/updatedTimestamp": "2026-09-21T20:37:45Z"
+      "grafana.app/updatedTimestamp": "2026-09-22T09:57:34Z"
     }
   },
   "spec": {
@@ -258,7 +264,7 @@
             "version": "13.2.1",
             "spec": {
               "options": {
-                "inlineEditing": true,
+                "inlineEditing": false,
                 "panZoom": false,
                 "root": {
                   "background": {
@@ -1794,2865 +1800,6 @@
           "transparent": true
         }
       },
-      "panel-102": {
-        "kind": "Panel",
-        "spec": {
-          "id": 102,
-          "title": "",
-          "description": "Status of incoming data stream.",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "drift_stream_status or vector(-1)",
-                        "format": "time_series",
-                        "instant": true,
-                        "legendFormat": "status",
-                        "range": false
-                      }
-                    },
-                    "refId": "A - overall status",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "drift_stream_status or vector(-1)",
-                        "format": "time_series",
-                        "instant": true,
-                        "legendFormat": "status details",
-                        "range": false
-                      }
-                    },
-                    "refId": "B - status details",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "canvas",
-            "version": "13.2.1",
-            "spec": {
-              "options": {
-                "inlineEditing": false,
-                "panZoom": false,
-                "root": {
-                  "background": {
-                    "color": {
-                      "field": "status",
-                      "fixed": "transparent"
-                    },
-                    "image": {
-                      "field": "",
-                      "fixed": "",
-                      "mode": "fixed"
-                    },
-                    "size": "original"
-                  },
-                  "border": {
-                    "color": {
-                      "fixed": "red"
-                    },
-                    "radius": 2,
-                    "width": 0
-                  },
-                  "constraint": {
-                    "horizontal": "left",
-                    "vertical": "top"
-                  },
-                  "elements": [
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        },
-                        "image": {
-                          "fixed": ""
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "field": "status details",
-                          "fixed": "#000000"
-                        },
-                        "size": 14,
-                        "text": {
-                          "field": "status details",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "middle"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "status details",
-                      "placement": {
-                        "height": 26,
-                        "left": 15,
-                        "rotation": 0,
-                        "top": 72,
-                        "width": 210
-                      },
-                      "type": "metric-value"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        },
-                        "width": 0
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "#ffffff"
-                        },
-                        "size": 32,
-                        "text": {
-                          "field": "status",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "middle"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "STATUS",
-                      "placement": {
-                        "height": 36,
-                        "left": 15,
-                        "rotation": 0,
-                        "top": 32,
-                        "width": 210
-                      },
-                      "type": "metric-value"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "field": "status details",
-                          "fixed": "#ccccdc"
-                        },
-                        "size": 14,
-                        "text": {
-                          "fixed": "Stream Status"
-                        },
-                        "valign": "top"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Stream status label",
-                      "placement": {
-                        "height": 22,
-                        "left": 15,
-                        "rotation": 0,
-                        "top": 6,
-                        "width": 230
-                      },
-                      "type": "text"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "center",
-                        "color": {
-                          "field": "status details",
-                          "fixed": "rgb(204, 204, 220)"
-                        },
-                        "size": 10,
-                        "text": {
-                          "fixed": "____________________________________________________________________________________________"
-                        },
-                        "valign": "middle"
-                      },
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "hr",
-                      "placement": {
-                        "height": 10,
-                        "left": -10,
-                        "rotation": 0,
-                        "top": 20,
-                        "width": 450
-                      },
-                      "type": "text"
-                    }
-                  ],
-                  "name": "Element 1789017050578",
-                  "placement": {
-                    "height": 100,
-                    "left": 0,
-                    "rotation": 0,
-                    "top": 0,
-                    "width": 100
-                  },
-                  "type": "frame"
-                },
-                "showAdvancedTypes": true,
-                "tooltip": {
-                  "disableForOneClick": false,
-                  "mode": "none"
-                },
-                "zoomToContent": false
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "unit": "none",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "transparent"
-                      }
-                    ]
-                  },
-                  "color": {
-                    "mode": "fixed",
-                    "fixedColor": "transparent"
-                  },
-                  "noValue": "No Data"
-                },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "status"
-                    },
-                    "properties": [
-                      {
-                        "id": "mappings",
-                        "value": [
-                          {
-                            "options": {
-                              "0": {
-                                "color": "semi-dark-green",
-                                "index": 1,
-                                "text": "HEALTHY"
-                              },
-                              "1": {
-                                "color": "semi-dark-orange",
-                                "index": 2,
-                                "text": "DEGRADED"
-                              },
-                              "2": {
-                                "color": "semi-dark-red",
-                                "index": 3,
-                                "text": "UNHEALTHY"
-                              },
-                              "-1": {
-                                "color": "#ccccdb1a",
-                                "index": 0,
-                                "text": "NOT READY"
-                              }
-                            },
-                            "type": "value"
-                          }
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "status details"
-                    },
-                    "properties": [
-                      {
-                        "id": "mappings",
-                        "value": [
-                          {
-                            "options": {
-                              "0": {
-                                "color": "#000000d9",
-                                "index": 1,
-                                "text": "Stream operating normally"
-                              },
-                              "1": {
-                                "color": "#000000d9",
-                                "index": 2,
-                                "text": "Timing issues detected"
-                              },
-                              "2": {
-                                "color": "#ffffffb3",
-                                "index": 3,
-                                "text": "Stream data unreliable"
-                              },
-                              "-1": {
-                                "color": "#ffffffb3",
-                                "index": 0,
-                                "text": "Waiting for events"
-                              }
-                            },
-                            "type": "value"
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          },
-          "transparent": true
-        }
-      },
-      "panel-103": {
-        "kind": "Panel",
-        "spec": {
-          "id": 103,
-          "title": "",
-          "description": "",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "(drift_events_processed_total\n-\ndrift_analysis_runs_total * drift_window_size)\nor vector(-999)",
-                        "format": "time_series",
-                        "instant": true,
-                        "legendFormat": "calculated_window_fill",
-                        "range": false
-                      }
-                    },
-                    "refId": "A - window fill",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "drift_window_size or vector(-999)",
-                        "format": "time_series",
-                        "instant": true,
-                        "legendFormat": "window_size",
-                        "range": false
-                      }
-                    },
-                    "refId": "B - window size",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "(100 * (drift_events_processed_total % drift_window_size) / drift_window_size) or vector(-999)",
-                        "instant": true,
-                        "legendFormat": "calculated_window_fill_percent",
-                        "range": false
-                      }
-                    },
-                    "refId": "C - window fill percent",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "(\n  (\n    drift_window_size\n    - (drift_events_processed_total % drift_window_size)\n  )\n  /\n  (\n    (rate(drift_events_processed_total[5m]) > 0)\n    or\n    (rate(drift_events_processed_total[1h]) > 0)\n  )\n)\nor vector(-1)",
-                        "instant": true,
-                        "legendFormat": "calculated_ETA",
-                        "range": false
-                      }
-                    },
-                    "refId": "D - calcilated ETA",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "(\n  (rate(drift_events_processed_total[5m]) > 0)\n  or\n  (rate(drift_events_processed_total[1h]) > 0)\n)\nor vector(-1)",
-                        "instant": true,
-                        "legendFormat": "calculated_recent_event_rate",
-                        "range": false
-                      }
-                    },
-                    "refId": "A - recent event rate",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "canvas",
-            "version": "13.2.1",
-            "spec": {
-              "options": {
-                "inlineEditing": false,
-                "panZoom": false,
-                "root": {
-                  "background": {
-                    "color": {
-                      "fixed": "transparent"
-                    },
-                    "image": {
-                      "field": "",
-                      "fixed": "",
-                      "mode": "fixed"
-                    },
-                    "size": "original"
-                  },
-                  "border": {
-                    "color": {
-                      "fixed": "red"
-                    },
-                    "radius": 2,
-                    "width": 0
-                  },
-                  "constraint": {
-                    "horizontal": "left",
-                    "vertical": "top"
-                  },
-                  "elements": [
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        },
-                        "image": {
-                          "mode": "fixed"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "text"
-                        },
-                        "size": 12,
-                        "text": {
-                          "field": "calculated_ETA",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "top"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Estimated readiness time",
-                      "placement": {
-                        "height": 19,
-                        "left": 43,
-                        "top": 67,
-                        "width": 114
-                      },
-                      "type": "metric-value"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "#ccccdb80"
-                        },
-                        "size": 12,
-                        "text": {
-                          "fixed": "ETA  ~"
-                        },
-                        "valign": "top"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "ETA label",
-                      "placement": {
-                        "height": 20,
-                        "left": 4,
-                        "top": 67,
-                        "width": 42
-                      },
-                      "type": "text"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "#ccccdb80"
-                        },
-                        "size": 16,
-                        "text": {
-                          "field": "window_size",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "middle"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Window size events",
-                      "placement": {
-                        "height": 35,
-                        "left": 101,
-                        "top": 26,
-                        "width": 66
-                      },
-                      "type": "metric-value"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "center",
-                        "color": {
-                          "fixed": "#ccccdb80"
-                        },
-                        "size": 16,
-                        "text": {
-                          "fixed": "/"
-                        },
-                        "valign": "middle"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "slash",
-                      "placement": {
-                        "height": 37,
-                        "left": 77,
-                        "top": 24,
-                        "width": 32
-                      },
-                      "type": "text"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "#ccccdb12"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "#ccccdb33"
-                        },
-                        "radius": 4,
-                        "width": 1
-                      },
-                      "config": {
-                        "align": "center",
-                        "color": {
-                          "fixed": "text"
-                        },
-                        "size": 20,
-                        "text": {
-                          "field": "calculated_window_fill",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "middle"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Window fill events",
-                      "placement": {
-                        "height": 35,
-                        "left": 2,
-                        "top": 26,
-                        "width": 80
-                      },
-                      "type": "metric-value"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        },
-                        "image": {
-                          "mode": "fixed"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "field": "calculated_window_fill_percent",
-                          "fixed": "text"
-                        },
-                        "size": 12,
-                        "text": {
-                          "field": "calculated_window_fill_percent",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "top"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Readiness percent",
-                      "placement": {
-                        "height": 20,
-                        "left": 131,
-                        "top": 2,
-                        "width": 50
-                      },
-                      "type": "metric-value"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "#ccccdb80"
-                        },
-                        "size": 12,
-                        "text": {
-                          "fixed": "Window readiness⠀·"
-                        },
-                        "valign": "top"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Window readiness label",
-                      "placement": {
-                        "height": 20,
-                        "left": 4,
-                        "top": 2,
-                        "width": 140
-                      },
-                      "type": "text"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "#ccccdb80"
-                        },
-                        "size": 12,
-                        "text": {
-                          "fixed": "Recent event rate"
-                        },
-                        "valign": "top"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Recent event rate label",
-                      "placement": {
-                        "height": 19,
-                        "left": 4,
-                        "top": 88,
-                        "width": 110
-                      },
-                      "type": "text"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        },
-                        "image": {
-                          "mode": "fixed"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "text"
-                        },
-                        "size": 12,
-                        "text": {
-                          "field": "calculated_recent_event_rate",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "top"
-                      },
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Recent event rate",
-                      "placement": {
-                        "height": 19,
-                        "left": 113,
-                        "top": 88,
-                        "width": 123
-                      },
-                      "type": "metric-value"
-                    }
-                  ],
-                  "name": "Element 1789017050578",
-                  "placement": {
-                    "height": 100,
-                    "left": 0,
-                    "rotation": 0,
-                    "top": 0,
-                    "width": 100
-                  },
-                  "type": "frame"
-                },
-                "showAdvancedTypes": true,
-                "tooltip": {
-                  "disableForOneClick": false,
-                  "mode": "none"
-                },
-                "zoomToContent": false
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "unit": "none",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "transparent"
-                      }
-                    ]
-                  },
-                  "color": {
-                    "mode": "fixed",
-                    "fixedColor": "transparent"
-                  }
-                },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "calculated_window_fill_percent"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "mode": "continuous-RdYlGr"
-                        }
-                      },
-                      {
-                        "id": "min",
-                        "value": 0
-                      },
-                      {
-                        "id": "max",
-                        "value": 100
-                      },
-                      {
-                        "id": "unit",
-                        "value": "percent"
-                      },
-                      {
-                        "id": "mappings",
-                        "value": [
-                          {
-                            "options": {
-                              "-999": {
-                                "index": 0,
-                                "text": "–"
-                              }
-                            },
-                            "type": "value"
-                          }
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "calculated_ETA"
-                    },
-                    "properties": [
-                      {
-                        "id": "unit",
-                        "value": "s"
-                      },
-                      {
-                        "id": "mappings",
-                        "value": [
-                          {
-                            "options": {
-                              "-1": {
-                                "index": 0,
-                                "text": "Awaiting event rate"
-                              }
-                            },
-                            "type": "value"
-                          }
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "calculated_recent_event_rate"
-                    },
-                    "properties": [
-                      {
-                        "id": "unit",
-                        "value": "eps"
-                      },
-                      {
-                        "id": "mappings",
-                        "value": [
-                          {
-                            "options": {
-                              "-1": {
-                                "index": 0,
-                                "text": "Awaiting events"
-                              }
-                            },
-                            "type": "value"
-                          }
-                        ]
-                      },
-                      {
-                        "id": "decimals",
-                        "value": 2
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "calculated_window_fill"
-                    },
-                    "properties": []
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": ""
-                    },
-                    "properties": []
-                  },
-                  {
-                    "matcher": {
-                      "id": "byRegexp",
-                      "options": "/.*/"
-                    },
-                    "properties": [
-                      {
-                        "id": "mappings",
-                        "value": [
-                          {
-                            "options": {
-                              "-999": {
-                                "index": 0,
-                                "text": "–"
-                              }
-                            },
-                            "type": "value"
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          },
-          "transparent": true
-        }
-      },
-      "panel-104": {
-        "kind": "Panel",
-        "spec": {
-          "id": 104,
-          "title": "",
-          "description": "",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "drift_window_time_span_seconds or vector(-999)",
-                        "format": "time_series",
-                        "instant": true,
-                        "legendFormat": "window span",
-                        "range": false
-                      }
-                    },
-                    "refId": "F - window span",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "canvas",
-            "version": "13.2.1",
-            "spec": {
-              "options": {
-                "inlineEditing": false,
-                "panZoom": false,
-                "root": {
-                  "background": {
-                    "color": {
-                      "fixed": "transparent"
-                    },
-                    "image": {
-                      "field": "",
-                      "fixed": "",
-                      "mode": "fixed"
-                    },
-                    "size": "original"
-                  },
-                  "border": {
-                    "color": {
-                      "fixed": "red"
-                    },
-                    "radius": 2,
-                    "width": 0
-                  },
-                  "constraint": {
-                    "horizontal": "left",
-                    "vertical": "top"
-                  },
-                  "elements": [
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "center",
-                        "color": {
-                          "fixed": "text"
-                        },
-                        "size": 26,
-                        "text": {
-                          "field": "window span",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "middle"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Window span",
-                      "placement": {
-                        "height": 45,
-                        "left": 0,
-                        "rotation": 0,
-                        "top": 20,
-                        "width": 130
-                      },
-                      "type": "metric-value"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "center",
-                        "color": {
-                          "fixed": "#ccccdb80"
-                        },
-                        "size": 14,
-                        "text": {
-                          "fixed": "Window span"
-                        },
-                        "valign": "top"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Window span label",
-                      "placement": {
-                        "height": 20,
-                        "left": 0,
-                        "rotation": 0,
-                        "top": 0,
-                        "width": 130
-                      },
-                      "type": "text"
-                    }
-                  ],
-                  "name": "Element 1789017050578",
-                  "placement": {
-                    "height": 100,
-                    "left": 0,
-                    "rotation": 0,
-                    "top": 0,
-                    "width": 100
-                  },
-                  "type": "frame"
-                },
-                "showAdvancedTypes": true,
-                "tooltip": {
-                  "disableForOneClick": false,
-                  "mode": "none"
-                },
-                "zoomToContent": false
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "unit": "none",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "transparent"
-                      }
-                    ]
-                  },
-                  "color": {
-                    "mode": "fixed",
-                    "fixedColor": "transparent"
-                  }
-                },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "window span"
-                    },
-                    "properties": [
-                      {
-                        "id": "unit",
-                        "value": "s"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byRegexp",
-                      "scope": "series",
-                      "options": ".*"
-                    },
-                    "properties": [
-                      {
-                        "id": "mappings",
-                        "value": [
-                          {
-                            "options": {
-                              "-999": {
-                                "color": "#ccccdb4d",
-                                "index": 0,
-                                "text": "–"
-                              }
-                            },
-                            "type": "value"
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          },
-          "transparent": true
-        }
-      },
-      "panel-105": {
-        "kind": "Panel",
-        "spec": {
-          "id": 105,
-          "title": "",
-          "description": "",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "drift_max_event_gap_seconds or vector(-999)",
-                        "format": "time_series",
-                        "instant": true,
-                        "legendFormat": "max event gap",
-                        "range": false
-                      }
-                    },
-                    "refId": "G - max event gap",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "canvas",
-            "version": "13.2.1",
-            "spec": {
-              "options": {
-                "inlineEditing": false,
-                "panZoom": false,
-                "root": {
-                  "background": {
-                    "color": {
-                      "fixed": "transparent"
-                    },
-                    "image": {
-                      "field": "",
-                      "fixed": "",
-                      "mode": "fixed"
-                    },
-                    "size": "original"
-                  },
-                  "border": {
-                    "color": {
-                      "fixed": "red"
-                    },
-                    "radius": 2,
-                    "width": 0
-                  },
-                  "constraint": {
-                    "horizontal": "left",
-                    "vertical": "top"
-                  },
-                  "elements": [
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "center",
-                        "color": {
-                          "fixed": "#ccccdb80"
-                        },
-                        "size": 14,
-                        "text": {
-                          "fixed": "Max event gap"
-                        },
-                        "valign": "top"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Max event gap label",
-                      "placement": {
-                        "height": 20,
-                        "left": 0,
-                        "rotation": 0,
-                        "top": 0,
-                        "width": 130
-                      },
-                      "type": "text"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "center",
-                        "color": {
-                          "fixed": "text"
-                        },
-                        "size": 26,
-                        "text": {
-                          "field": "max event gap",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "middle"
-                      },
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Max event gap value",
-                      "placement": {
-                        "height": 45,
-                        "left": 0,
-                        "rotation": 0,
-                        "top": 20,
-                        "width": 130
-                      },
-                      "type": "metric-value"
-                    }
-                  ],
-                  "name": "Element 1789017050578",
-                  "placement": {
-                    "height": 100,
-                    "left": 0,
-                    "rotation": 0,
-                    "top": 0,
-                    "width": 100
-                  },
-                  "type": "frame"
-                },
-                "showAdvancedTypes": true,
-                "tooltip": {
-                  "disableForOneClick": false,
-                  "mode": "none"
-                },
-                "zoomToContent": false
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "unit": "none",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "transparent"
-                      }
-                    ]
-                  },
-                  "color": {
-                    "mode": "fixed",
-                    "fixedColor": "transparent"
-                  }
-                },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "max event gap"
-                    },
-                    "properties": [
-                      {
-                        "id": "unit",
-                        "value": "s"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byRegexp",
-                      "scope": "series",
-                      "options": ".*"
-                    },
-                    "properties": [
-                      {
-                        "id": "mappings",
-                        "value": [
-                          {
-                            "options": {
-                              "-999": {
-                                "color": "#ccccdb4d",
-                                "index": 0,
-                                "text": "–"
-                              }
-                            },
-                            "type": "value"
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          },
-          "transparent": true
-        }
-      },
-      "panel-106": {
-        "kind": "Panel",
-        "spec": {
-          "id": 106,
-          "title": "",
-          "description": "",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "sum(round(increase(drift_late_events_total[$__range]))) or on() vector(-999)",
-                        "instant": true,
-                        "legendFormat": "Late events",
-                        "range": false
-                      }
-                    },
-                    "refId": "I - late events (for period)",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "sum(round(increase(drift_out_of_order_events_total[$__range]))) or on() vector(-999)",
-                        "instant": true,
-                        "legendFormat": "out-of-order",
-                        "range": false
-                      }
-                    },
-                    "refId": "J - out-of-order (for period)",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "vector($__range_s)",
-                        "instant": true,
-                        "legendFormat": "selected range",
-                        "range": false
-                      }
-                    },
-                    "refId": "L - selected range",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "max(\n  (\n    vector(scalar(sum(round(increase(drift_late_events_total[$__range])))))\n    >= bool \n    scalar(max(drift_stream_threshold{metric=\"drift_event_time_lag_seconds\", level=\"warning\"}))\n  )\n  +\n  (\n    vector(scalar(sum(round(increase(drift_late_events_total[$__range])))))\n    >= bool \n    scalar(max(drift_stream_threshold{metric=\"drift_event_time_lag_seconds\", level=\"critical\"}))\n  )\n) \nor on() vector(-1)\n",
-                        "instant": true,
-                        "legendFormat": "late_events_status",
-                        "range": false
-                      }
-                    },
-                    "refId": "A",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "canvas",
-            "version": "13.2.1",
-            "spec": {
-              "options": {
-                "inlineEditing": true,
-                "panZoom": false,
-                "root": {
-                  "background": {
-                    "color": {
-                      "fixed": "transparent"
-                    },
-                    "image": {
-                      "field": "",
-                      "fixed": "",
-                      "mode": "fixed"
-                    },
-                    "size": "original"
-                  },
-                  "border": {
-                    "color": {
-                      "fixed": "red"
-                    },
-                    "radius": 2,
-                    "width": 0
-                  },
-                  "constraint": {
-                    "horizontal": "left",
-                    "vertical": "top"
-                  },
-                  "elements": [
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "#ccccdb80"
-                        },
-                        "size": 14,
-                        "text": {
-                          "fixed": "Late events"
-                        },
-                        "valign": "top"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Late events label",
-                      "placement": {
-                        "height": 20,
-                        "left": 160,
-                        "rotation": 0,
-                        "top": 30,
-                        "width": 111
-                      },
-                      "type": "text"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        },
-                        "image": {
-                          "mode": "fixed"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "field": "Late events",
-                          "fixed": "text"
-                        },
-                        "size": 26,
-                        "text": {
-                          "field": "Late events",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "middle"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Late events",
-                      "placement": {
-                        "height": 36,
-                        "left": 160,
-                        "rotation": 0,
-                        "top": 50,
-                        "width": 95
-                      },
-                      "type": "metric-value"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "#ccccdb80"
-                        },
-                        "size": 14,
-                        "text": {
-                          "fixed": "Out-of-order events"
-                        },
-                        "valign": "top"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Out-of-order label",
-                      "placement": {
-                        "height": 19,
-                        "left": 0,
-                        "rotation": 0,
-                        "top": 30,
-                        "width": 150
-                      },
-                      "type": "text"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        },
-                        "image": {
-                          "mode": "fixed"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "text"
-                        },
-                        "size": 26,
-                        "text": {
-                          "field": "out-of-order",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "middle"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Out-of-order",
-                      "placement": {
-                        "height": 36,
-                        "left": 0,
-                        "rotation": 0,
-                        "top": 50,
-                        "width": 120
-                      },
-                      "type": "metric-value"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "#ccccdb80"
-                        },
-                        "size": 14,
-                        "text": {
-                          "field": "selected range",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "bottom"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Selected period",
-                      "placement": {
-                        "height": 20,
-                        "left": 130,
-                        "rotation": 0,
-                        "top": 0,
-                        "width": 105
-                      },
-                      "type": "metric-value"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "#ccccdb80"
-                        },
-                        "size": 14,
-                        "text": {
-                          "fixed": "Selected period⠀·"
-                        },
-                        "valign": "bottom"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Selected period label",
-                      "placement": {
-                        "height": 20,
-                        "left": 0,
-                        "rotation": 0,
-                        "top": 0,
-                        "width": 159
-                      },
-                      "type": "text"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "#ccccdb4d"
-                        },
-                        "size": 10,
-                        "text": {
-                          "fixed": "______________________________________________________________________________________________________________________________________________________________________________________________________________"
-                        },
-                        "valign": "middle"
-                      },
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "divider",
-                      "placement": {
-                        "height": 10,
-                        "left": 0,
-                        "rotation": 0,
-                        "top": 12,
-                        "width": 278
-                      },
-                      "type": "text"
-                    }
-                  ],
-                  "name": "Element 1789017050578",
-                  "placement": {
-                    "height": 100,
-                    "left": 0,
-                    "rotation": 0,
-                    "top": 0,
-                    "width": 100
-                  },
-                  "type": "frame"
-                },
-                "showAdvancedTypes": true,
-                "tooltip": {
-                  "disableForOneClick": false,
-                  "mode": "none"
-                },
-                "zoomToContent": false
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "unit": "none",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "transparent"
-                      }
-                    ]
-                  },
-                  "color": {
-                    "mode": "fixed",
-                    "fixedColor": "transparent"
-                  }
-                },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "selected range"
-                    },
-                    "properties": [
-                      {
-                        "id": "unit",
-                        "value": "s"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "Late events"
-                    },
-                    "properties": [
-                      {
-                        "id": "unit",
-                        "value": "locale"
-                      },
-                      {
-                        "id": "color",
-                        "value": {
-                          "mode": "continuous-YlRd"
-                        }
-                      },
-                      {
-                        "id": "thresholds",
-                        "value": {
-                          "mode": "absolute",
-                          "steps": [
-                            {
-                              "color": "green",
-                              "value": 0
-                            },
-                            {
-                              "color": "red",
-                              "value": 0
-                            }
-                          ]
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "out-of-order"
-                    },
-                    "properties": [
-                      {
-                        "id": "unit",
-                        "value": "locale"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byRegexp",
-                      "options": "/.*/"
-                    },
-                    "properties": [
-                      {
-                        "id": "mappings",
-                        "value": [
-                          {
-                            "options": {
-                              "-999": {
-                                "color": "#ccccdb80",
-                                "index": 0,
-                                "text": "–"
-                              }
-                            },
-                            "type": "value"
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          },
-          "transparent": true
-        }
-      },
-      "panel-107": {
-        "kind": "Panel",
-        "spec": {
-          "id": 107,
-          "title": "",
-          "description": "",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "(process_start_time_seconds * 1000)  or vector(-999)",
-                        "instant": true,
-                        "legendFormat": "process_start_time_seconds",
-                        "range": false
-                      }
-                    },
-                    "refId": "A - process start time",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "(time() - process_start_time_seconds)  or vector(-999)",
-                        "instant": true,
-                        "legendFormat": "calculated_process_uptime",
-                        "range": false
-                      }
-                    },
-                    "refId": "B - calculated process uptime",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "canvas",
-            "version": "13.2.1",
-            "spec": {
-              "options": {
-                "inlineEditing": false,
-                "panZoom": false,
-                "root": {
-                  "background": {
-                    "color": {
-                      "fixed": "#00000000"
-                    },
-                    "image": {
-                      "field": "",
-                      "fixed": "",
-                      "mode": "fixed"
-                    },
-                    "size": "original"
-                  },
-                  "border": {
-                    "color": {
-                      "fixed": "red"
-                    },
-                    "radius": 2,
-                    "width": 0
-                  },
-                  "constraint": {
-                    "horizontal": "left",
-                    "vertical": "top"
-                  },
-                  "elements": [
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "text"
-                        },
-                        "size": 14,
-                        "text": {
-                          "field": "calculated_process_uptime",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "bottom"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Exporter uptime",
-                      "placement": {
-                        "height": 22,
-                        "left": 138,
-                        "rotation": 0,
-                        "top": 22,
-                        "width": 217
-                      },
-                      "type": "metric-value"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "#ccccdb80"
-                        },
-                        "size": 14,
-                        "text": {
-                          "fixed": "Exporter uptime"
-                        },
-                        "valign": "bottom"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Exporter uptime label",
-                      "placement": {
-                        "height": 22,
-                        "left": 0,
-                        "rotation": 0,
-                        "top": 22,
-                        "width": 150
-                      },
-                      "type": "text"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "text"
-                        },
-                        "size": 14,
-                        "text": {
-                          "field": "process_start_time_seconds",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "bottom"
-                      },
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Exporter start time",
-                      "placement": {
-                        "height": 22,
-                        "left": 138,
-                        "rotation": 0,
-                        "top": 0,
-                        "width": 155
-                      },
-                      "type": "metric-value"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "#ccccdb80"
-                        },
-                        "size": 14,
-                        "text": {
-                          "fixed": "Exporter started at"
-                        },
-                        "valign": "bottom"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Exporter started label",
-                      "placement": {
-                        "height": 22,
-                        "left": 0,
-                        "rotation": 0,
-                        "top": 0,
-                        "width": 150
-                      },
-                      "type": "text"
-                    }
-                  ],
-                  "name": "Element 1789017050578",
-                  "placement": {
-                    "height": 100,
-                    "left": 0,
-                    "rotation": 0,
-                    "top": 0,
-                    "width": 100
-                  },
-                  "type": "frame"
-                },
-                "showAdvancedTypes": true,
-                "tooltip": {
-                  "disableForOneClick": false,
-                  "mode": "none"
-                },
-                "zoomToContent": false
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "unit": "none",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "transparent"
-                      }
-                    ]
-                  },
-                  "color": {
-                    "mode": "fixed",
-                    "fixedColor": "transparent"
-                  }
-                },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "process_start_time_seconds"
-                    },
-                    "properties": [
-                      {
-                        "id": "unit",
-                        "value": "time:DD MMM YYYY HH:mm:ss"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "calculated_process_uptime"
-                    },
-                    "properties": [
-                      {
-                        "id": "unit",
-                        "value": "s"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byRegexp",
-                      "scope": "series",
-                      "options": ".*"
-                    },
-                    "properties": [
-                      {
-                        "id": "mappings",
-                        "value": [
-                          {
-                            "options": {
-                              "-999": {
-                                "index": 0,
-                                "text": "No data"
-                              }
-                            },
-                            "type": "value"
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          },
-          "transparent": true
-        }
-      },
-      "panel-108": {
-        "kind": "Panel",
-        "spec": {
-          "id": 108,
-          "title": "",
-          "description": "",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "drift_events_processed_total  or vector(0)",
-                        "instant": true,
-                        "legendFormat": "events_processed_total",
-                        "range": false
-                      }
-                    },
-                    "refId": "A",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "floor(drift_events_processed_total / drift_window_size) or vector(0)",
-                        "instant": true,
-                        "legendFormat": "calculated_analysis_runs_total",
-                        "range": false
-                      }
-                    },
-                    "refId": "B",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "drift_invalid_event_time_rate or vector(0)",
-                        "instant": true,
-                        "legendFormat": "invalid_event_time_rate",
-                        "range": false
-                      }
-                    },
-                    "refId": "C",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "canvas",
-            "version": "13.2.1",
-            "spec": {
-              "options": {
-                "inlineEditing": false,
-                "panZoom": false,
-                "root": {
-                  "background": {
-                    "color": {
-                      "fixed": "#00000000"
-                    },
-                    "image": {
-                      "field": "",
-                      "fixed": "",
-                      "mode": "fixed"
-                    },
-                    "size": "original"
-                  },
-                  "border": {
-                    "color": {
-                      "fixed": "red"
-                    },
-                    "radius": 2,
-                    "width": 0
-                  },
-                  "constraint": {
-                    "horizontal": "left",
-                    "vertical": "top"
-                  },
-                  "elements": [
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "text"
-                        },
-                        "size": 14,
-                        "text": {
-                          "field": "events_processed_total",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "bottom"
-                      },
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Events processed",
-                      "placement": {
-                        "height": 22,
-                        "left": 136,
-                        "rotation": 0,
-                        "top": 0,
-                        "width": 155
-                      },
-                      "type": "metric-value"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "#ccccdb80"
-                        },
-                        "size": 14,
-                        "text": {
-                          "fixed": "Events processed"
-                        },
-                        "valign": "bottom"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Events processed label",
-                      "placement": {
-                        "height": 22,
-                        "left": 0,
-                        "rotation": 0,
-                        "top": 0,
-                        "width": 132
-                      },
-                      "type": "text"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "text"
-                        },
-                        "size": 14,
-                        "text": {
-                          "field": "calculated_analysis_runs_total",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "bottom"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Analysis runs",
-                      "placement": {
-                        "height": 22,
-                        "left": 136,
-                        "rotation": 0,
-                        "top": 22,
-                        "width": 217
-                      },
-                      "type": "metric-value"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "#ccccdb80"
-                        },
-                        "size": 14,
-                        "text": {
-                          "fixed": "Analysis runs"
-                        },
-                        "valign": "bottom"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Analysis runs label",
-                      "placement": {
-                        "height": 22,
-                        "left": 0,
-                        "rotation": 0,
-                        "top": 22,
-                        "width": 132
-                      },
-                      "type": "text"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "text"
-                        },
-                        "size": 14,
-                        "text": {
-                          "field": "invalid_event_time_rate",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "valign": "bottom"
-                      },
-                      "connections": [],
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Invalid event time",
-                      "placement": {
-                        "height": 22,
-                        "left": 136,
-                        "rotation": 0,
-                        "top": 44,
-                        "width": 217
-                      },
-                      "type": "metric-value"
-                    },
-                    {
-                      "background": {
-                        "color": {
-                          "fixed": "transparent"
-                        }
-                      },
-                      "border": {
-                        "color": {
-                          "fixed": "dark-green"
-                        }
-                      },
-                      "config": {
-                        "align": "left",
-                        "color": {
-                          "fixed": "#ccccdb80"
-                        },
-                        "size": 14,
-                        "text": {
-                          "fixed": "Invalid timestamps"
-                        },
-                        "valign": "bottom"
-                      },
-                      "constraint": {
-                        "horizontal": "left",
-                        "vertical": "top"
-                      },
-                      "links": [],
-                      "name": "Invalid event time label",
-                      "placement": {
-                        "height": 22,
-                        "left": 0,
-                        "rotation": 0,
-                        "top": 44,
-                        "width": 132
-                      },
-                      "type": "text"
-                    }
-                  ],
-                  "name": "Element 1789017050578",
-                  "placement": {
-                    "height": 100,
-                    "left": 0,
-                    "rotation": 0,
-                    "top": 0,
-                    "width": 100
-                  },
-                  "type": "frame"
-                },
-                "showAdvancedTypes": true,
-                "tooltip": {
-                  "disableForOneClick": false,
-                  "mode": "none"
-                },
-                "zoomToContent": false
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "unit": "none",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "transparent"
-                      }
-                    ]
-                  },
-                  "color": {
-                    "mode": "fixed",
-                    "fixedColor": "transparent"
-                  }
-                },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "events_processed_total"
-                    },
-                    "properties": [
-                      {
-                        "id": "unit",
-                        "value": "locale"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "invalid_event_time_rate"
-                    },
-                    "properties": [
-                      {
-                        "id": "unit",
-                        "value": "percentunit"
-                      },
-                      {
-                        "id": "decimals",
-                        "value": 2
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "calculated_analysis_runs_total"
-                    },
-                    "properties": [
-                      {
-                        "id": "unit",
-                        "value": "locale"
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          },
-          "transparent": true
-        }
-      },
       "panel-109": {
         "kind": "Panel",
         "spec": {
@@ -4913,7 +2060,7 @@
                         "range": false
                       }
                     },
-                    "refId": "G - max event gap",
+                    "refId": "A - invalid timestamp rate",
                     "hidden": false
                   }
                 }
@@ -4970,7 +2117,7 @@
                         "color": {
                           "fixed": "#ccccdb80"
                         },
-                        "size": 14,
+                        "size": 12,
                         "text": {
                           "fixed": "Invalid timestamps"
                         },
@@ -5129,7 +2276,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(round(increase(drift_events_processed_total[$__range]))) \nor on() vector(-999)",
+                        "expr": "round(sum(increase(drift_events_processed_total[$__range])))\nor on() vector(-999)",
                         "instant": true,
                         "legendFormat": "events_processed_period",
                         "range": false
@@ -5274,7 +2421,7 @@
                         "vertical": "top"
                       },
                       "links": [],
-                      "name": "Lave events",
+                      "name": "Late events",
                       "placement": {
                         "height": 26,
                         "left": 172,
@@ -8345,7 +5492,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "max(drift_active_alerts)\nor on() vector(-1)",
+                        "expr": "drift_active_alerts\nor on() vector(-1)",
                         "format": "time_series",
                         "instant": true,
                         "legendFormat": "active counter",
@@ -8936,7 +6083,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "# approximation\n(\n  sum(drift_events_processed_total) \n  - \n  (sum(drift_analysis_runs_total) * max(drift_window_size))\n) \nor on() vector(-999)",
+                        "expr": "max(drift_current_window_events)\nor on() vector(-999)",
                         "format": "time_series",
                         "instant": true,
                         "legendFormat": "calculated_window_fill",
@@ -8984,7 +6131,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "# approximation\n(\n  100 * \n  (\n    sum(drift_events_processed_total)\n    -\n    sum(drift_analysis_runs_total) * max(drift_window_size)\n  )\n  /\n  max(drift_window_size)\n) \nor on() vector(-999)",
+                        "expr": "(\n  100 * max(drift_current_window_events)\n  /\n  max(drift_window_size)\n)\nor on() vector(-999)",
                         "instant": true,
                         "legendFormat": "calculated_window_fill_percent",
                         "range": false
@@ -9007,13 +6154,13 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "# approximation\n(\n  max(drift_window_size)\n  -\n  (\n    sum(drift_events_processed_total)\n    -\n    sum(drift_analysis_runs_total) * max(drift_window_size)\n  )\n)\n/\nscalar(\n  max(rate(drift_events_processed_total[5m])) > 0\n  or\n  max(rate(drift_events_processed_total[1h])) > 0\n  or\n  vector(0.0001)\n)\nor on() vector(-1)",
+                        "expr": "(\n  max(drift_window_size)\n  -\n  max(drift_current_window_events)\n)\n/\nscalar(\n  max(rate(drift_events_processed_total[5m])) > 0\n  or\n  max(rate(drift_events_processed_total[1h])) > 0\n  or\n  vector(0.0001)\n)\nor on() vector(-1)",
                         "instant": true,
                         "legendFormat": "calculated_ETA",
                         "range": false
                       }
                     },
-                    "refId": "D - calcilated ETA",
+                    "refId": "D - calculated ETA",
                     "hidden": false
                   }
                 },
@@ -10119,29 +7266,6 @@
                       }
                     },
                     "refId": "D",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "drift_late_events_total or on() vector(-999)",
-                        "instant": true,
-                        "legendFormat": "process_start_time",
-                        "range": false
-                      }
-                    },
-                    "refId": "E",
                     "hidden": false
                   }
                 }
@@ -11943,7 +9067,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "drift_metric_value{feature=\"prediction\"}",
+                        "expr": "max by (feature, type, metric) (drift_metric_value{feature=\"prediction\"})",
                         "format": "time_series",
                         "instant": false,
                         "legendFormat": "{{metric}}",
@@ -12129,7 +9253,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "drift_metric_value{\n  feature!=\"prediction\",\n  feature=~\"$history_feature\",\n  metric=~\"$history_metric\"\n}",
+                        "expr": "max by (feature, type, metric) (\n  drift_metric_value{\n    feature!=\"prediction\",\n    feature=~\"$history_feature\",\n    metric=~\"$history_metric\"\n  }\n)",
                         "format": "time_series",
                         "instant": false,
                         "legendFormat": "{{metric}}",
@@ -12396,7 +9520,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "drift_status{\n  feature!=\"prediction\",\n  feature=~\"$history_feature\",\n  metric=~\"$history_metric\"\n}",
+                        "expr": "# real status\nmax by (feature, type, metric) (\n  last_over_time(\n    drift_status{\n      feature!=\"prediction\",\n      feature=~\"$history_feature\",\n      metric=~\"$history_metric\"\n    }[$status_valid_for]\n  )\n)\n# or NaN fallback \nor\n(\n  max by (feature, type, metric) (\n    last_over_time(\n      drift_status{\n        feature!=\"prediction\",\n        feature=~\"$history_feature\",\n        metric=~\"$history_metric\"\n      }[1h]\n    )\n  )\n  * NaN\n)",
                         "format": "time_series",
                         "instant": false,
                         "legendFormat": "{{metric}}",
@@ -12455,6 +9579,17 @@
                           "index": 2
                         }
                       }
+                    },
+                    {
+                      "type": "special",
+                      "options": {
+                        "match": "nan",
+                        "result": {
+                          "text": "No data",
+                          "color": "#00000000",
+                          "index": 3
+                        }
+                      }
                     }
                   ],
                   "thresholds": {
@@ -12477,7 +9612,7 @@
                       "tooltip": false,
                       "viz": false
                     },
-                    "insertNulls": 3600000,
+                    "insertNulls": false,
                     "lineWidth": 1,
                     "spanNulls": false
                   },
@@ -13346,7 +10481,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "drift_status{feature=\"prediction\"}",
+                        "expr": "# prediction metric status\nmax by (feature, type, metric) (\n  last_over_time(\n    drift_status{feature=\"prediction\"}[$status_valid_for]\n  )\n)\n# or NaN fallback \nor\n(\n  max by (feature, type, metric) (\n    last_over_time(\n      drift_status{\n        feature=\"prediction\",\n      }[1h]\n    )\n  )\n  * NaN\n)",
                         "format": "time_series",
                         "instant": false,
                         "legendFormat": "{{metric}}",
@@ -13405,6 +10540,17 @@
                           "index": 2
                         }
                       }
+                    },
+                    {
+                      "type": "special",
+                      "options": {
+                        "match": "nan",
+                        "result": {
+                          "text": "No data",
+                          "color": "transparent",
+                          "index": 3
+                        }
+                      }
                     }
                   ],
                   "thresholds": {
@@ -13427,7 +10573,7 @@
                       "tooltip": false,
                       "viz": false
                     },
-                    "insertNulls": 3600000,
+                    "insertNulls": false,
                     "lineWidth": 1,
                     "spanNulls": false
                   },
@@ -13605,20 +10751,42 @@
                         "name": "cfxnbdacrd728d"
                       },
                       "spec": {
-                        "editorMode": "builder",
-                        "expr": "max_over_time(\n  drift_stream_status[$__interval]\n)",
-                        "legendFormat": "__auto",
+                        "editorMode": "code",
+                        "expr": "max(\n  drift_stream_status\n  and on (job, instance)\n  (up == 1)\n)",
+                        "legendFormat": "Stream status",
                         "range": true
                       }
                     },
                     "refId": "A",
                     "hidden": false
                   }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "max(\n  up\n  and on (job, instance)\n  drift_stream_status\n)\nor vector(0)",
+                        "instant": false,
+                        "legendFormat": "Exported status",
+                        "range": true
+                      }
+                    },
+                    "refId": "B",
+                    "hidden": false
+                  }
                 }
               ],
               "transformations": [],
               "queryOptions": {
-                "maxDataPoints": 100,
+                "maxDataPoints": 150,
                 "interval": "1m"
               }
             }
@@ -13635,7 +10803,7 @@
                   "placement": "bottom",
                   "showLegend": true
                 },
-                "rowHeight": 0.04,
+                "rowHeight": 0.67,
                 "showValue": "never",
                 "tooltip": {
                   "hideZeros": false,
@@ -13645,34 +10813,6 @@
               },
               "fieldConfig": {
                 "defaults": {
-                  "displayName": "Stream Status",
-                  "mappings": [
-                    {
-                      "type": "value",
-                      "options": {
-                        "0": {
-                          "text": "Healthy",
-                          "color": "green",
-                          "index": 1
-                        },
-                        "1": {
-                          "text": "Degraded",
-                          "color": "orange",
-                          "index": 2
-                        },
-                        "2": {
-                          "text": "Unhealthy",
-                          "color": "red",
-                          "index": 3
-                        },
-                        "-1": {
-                          "text": "Not ready",
-                          "color": "#ccccdb4d",
-                          "index": 0
-                        }
-                      }
-                    }
-                  ],
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -13696,7 +10836,76 @@
                     "lineWidth": 1
                   }
                 },
-                "overrides": []
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Exported status"
+                    },
+                    "properties": [
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "0": {
+                                "color": "#ccccdb1a",
+                                "index": 0,
+                                "text": "Down"
+                              },
+                              "1": {
+                                "color": "#55a64b66",
+                                "index": 1,
+                                "text": "Up"
+                              }
+                            },
+                            "type": "value"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Stream status"
+                    },
+                    "properties": [
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "0": {
+                                "color": "semi-dark-green",
+                                "index": 1,
+                                "text": "Healthy"
+                              },
+                              "1": {
+                                "color": "semi-dark-orange",
+                                "index": 2,
+                                "text": "Degraded"
+                              },
+                              "2": {
+                                "color": "semi-dark-red",
+                                "index": 3,
+                                "text": "Unhealthy"
+                              },
+                              "-1": {
+                                "color": "#ccccdb80",
+                                "index": 0,
+                                "text": "Not ready"
+                              }
+                            },
+                            "type": "value"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
               }
             }
           }
@@ -13726,7 +10935,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "# drift_av_status or vector(-999)\nvector(1)",
+                        "expr": "drift_av_status or vector(-999)",
                         "format": "time_series",
                         "instant": true,
                         "legendFormat": "av_status",
@@ -13750,7 +10959,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "# drift_av_status or vector(-1)\nvector(1)",
+                        "expr": "drift_av_status or vector(-1)",
                         "format": "time_series",
                         "instant": true,
                         "legendFormat": "av_status_details",
@@ -14386,7 +11595,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "drift_av_status",
+                        "expr": "max(drift_av_status)",
                         "format": "time_series",
                         "instant": false,
                         "legendFormat": "__auto",
@@ -14400,7 +11609,7 @@
               ],
               "transformations": [],
               "queryOptions": {
-                "maxDataPoints": 100,
+                "maxDataPoints": 150,
                 "interval": "1m"
               }
             }
@@ -15560,7 +12769,7 @@
                                   "x": 0,
                                   "y": 0,
                                   "width": 24,
-                                  "height": 3,
+                                  "height": 4,
                                   "element": {
                                     "kind": "ElementReference",
                                     "name": "panel-91"
@@ -15582,156 +12791,6 @@
                           "kind": "GridLayout",
                           "spec": {
                             "items": []
-                          }
-                        }
-                      }
-                    },
-                    {
-                      "kind": "RowsLayoutRow",
-                      "spec": {
-                        "title": "Window & Event Timing – Backup",
-                        "collapse": true,
-                        "hideHeader": false,
-                        "conditionalRendering": {
-                          "kind": "ConditionalRenderingGroup",
-                          "spec": {
-                            "visibility": "hide",
-                            "condition": "and",
-                            "items": [
-                              {
-                                "kind": "ConditionalRenderingVariable",
-                                "spec": {
-                                  "variable": "_hide_backup",
-                                  "operator": "equals",
-                                  "value": "true"
-                                }
-                              }
-                            ]
-                          }
-                        },
-                        "layout": {
-                          "kind": "GridLayout",
-                          "spec": {
-                            "items": [
-                              {
-                                "kind": "GridLayoutItem",
-                                "spec": {
-                                  "x": 0,
-                                  "y": 0,
-                                  "width": 5,
-                                  "height": 3,
-                                  "element": {
-                                    "kind": "ElementReference",
-                                    "name": "panel-102"
-                                  }
-                                }
-                              },
-                              {
-                                "kind": "GridLayoutItem",
-                                "spec": {
-                                  "x": 6,
-                                  "y": 0,
-                                  "width": 5,
-                                  "height": 3,
-                                  "element": {
-                                    "kind": "ElementReference",
-                                    "name": "panel-103"
-                                  }
-                                }
-                              },
-                              {
-                                "kind": "GridLayoutItem",
-                                "spec": {
-                                  "x": 11,
-                                  "y": 0,
-                                  "width": 3,
-                                  "height": 2,
-                                  "element": {
-                                    "kind": "ElementReference",
-                                    "name": "panel-104"
-                                  }
-                                }
-                              },
-                              {
-                                "kind": "GridLayoutItem",
-                                "spec": {
-                                  "x": 14,
-                                  "y": 0,
-                                  "width": 3,
-                                  "height": 2,
-                                  "element": {
-                                    "kind": "ElementReference",
-                                    "name": "panel-105"
-                                  }
-                                }
-                              },
-                              {
-                                "kind": "GridLayoutItem",
-                                "spec": {
-                                  "x": 17,
-                                  "y": 0,
-                                  "width": 6,
-                                  "height": 3,
-                                  "element": {
-                                    "kind": "ElementReference",
-                                    "name": "panel-106"
-                                  }
-                                }
-                              }
-                            ]
-                          }
-                        }
-                      }
-                    },
-                    {
-                      "kind": "RowsLayoutRow",
-                      "spec": {
-                        "title": "Stream Stats – Backup",
-                        "collapse": true,
-                        "conditionalRendering": {
-                          "kind": "ConditionalRenderingGroup",
-                          "spec": {
-                            "visibility": "hide",
-                            "condition": "and",
-                            "items": [
-                              {
-                                "kind": "ConditionalRenderingVariable",
-                                "spec": {
-                                  "variable": "_hide_backup",
-                                  "operator": "equals",
-                                  "value": "true"
-                                }
-                              }
-                            ]
-                          }
-                        },
-                        "layout": {
-                          "kind": "AutoGridLayout",
-                          "spec": {
-                            "maxColumnCount": 3,
-                            "columnWidthMode": "standard",
-                            "rowHeightMode": "custom",
-                            "rowHeight": 80,
-                            "items": [
-                              {
-                                "kind": "AutoGridLayoutItem",
-                                "spec": {
-                                  "element": {
-                                    "kind": "ElementReference",
-                                    "name": "panel-107"
-                                  }
-                                }
-                              },
-                              {
-                                "kind": "AutoGridLayoutItem",
-                                "spec": {
-                                  "element": {
-                                    "kind": "ElementReference",
-                                    "name": "panel-108"
-                                  }
-                                }
-                              }
-                            ]
                           }
                         }
                       }
@@ -15760,14 +12819,14 @@
                       },
                       "spec": {
                         "qryType": 5,
-                        "query": "query_result(min(process_start_time_seconds * 1000))",
+                        "query": "query_result(max(process_start_time_seconds{job=\"drift-exporter\"}) * 1000)",
                         "refId": "PrometheusVariableQueryEditor-VariableQuery"
                       }
                     },
                     "regex": "/(\\d+)\\s+\\d+$/",
                     "regexApplyTo": "value",
                     "sort": "disabled",
-                    "definition": "query_result(min(process_start_time_seconds * 1000))",
+                    "definition": "query_result(max(process_start_time_seconds{job=\"drift-exporter\"}) * 1000)",
                     "options": [],
                     "multi": false,
                     "includeAll": false,
@@ -15781,7 +12840,7 @@
             "kind": "RowsLayoutRow",
             "spec": {
               "title": "Input Data Drift⠀·⠀Last completed analysis",
-              "collapse": false,
+              "collapse": true,
               "hideHeader": false,
               "layout": {
                 "kind": "RowsLayout",
@@ -15839,7 +12898,7 @@
                               {
                                 "kind": "GridLayoutItem",
                                 "spec": {
-                                  "x": 12,
+                                  "x": 11,
                                   "y": 0,
                                   "width": 4,
                                   "height": 2,
@@ -15852,7 +12911,7 @@
                               {
                                 "kind": "GridLayoutItem",
                                 "spec": {
-                                  "x": 17,
+                                  "x": 15,
                                   "y": 0,
                                   "width": 4,
                                   "height": 2,
@@ -15890,7 +12949,7 @@
             "kind": "RowsLayoutRow",
             "spec": {
               "title": "Feature-level Drift⠀·⠀Last completed analysis",
-              "collapse": false,
+              "collapse": true,
               "hideHeader": false,
               "fillScreen": false,
               "layout": {
@@ -16092,7 +13151,7 @@
                       "kind": "RowsLayoutRow",
                       "spec": {
                         "title": "$history_feature",
-                        "collapse": true,
+                        "collapse": false,
                         "repeat": {
                           "mode": "variable",
                           "value": "history_feature"
@@ -16545,7 +13604,7 @@
                       "kind": "RowsLayoutRow",
                       "spec": {
                         "title": "Drift Over Time",
-                        "collapse": true,
+                        "collapse": false,
                         "hideHeader": false,
                         "layout": {
                           "kind": "AutoGridLayout",
@@ -16873,6 +13932,26 @@
           },
           "hide": "hideVariable",
           "skipUrlSync": true
+        }
+      },
+      {
+        "kind": "CustomVariable",
+        "spec": {
+          "name": "status_valid_for",
+          "query": "5m,15m,30m",
+          "current": {
+            "text": "15m",
+            "value": "15m"
+          },
+          "options": [],
+          "multi": false,
+          "includeAll": false,
+          "label": "Status valid for ",
+          "hide": "dontHide",
+          "skipUrlSync": false,
+          "description": "Time without updates before the metric status is shown as No data.",
+          "allowCustomValue": true,
+          "valuesFormat": "csv"
         }
       }
     ],

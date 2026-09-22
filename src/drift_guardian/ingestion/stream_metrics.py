@@ -33,8 +33,7 @@ class StreamThresholds:
     window_time_span_seconds: ThresholdPair | None = None
     max_event_gap_seconds: ThresholdPair | None = None
     invalid_event_time_rate: ThresholdPair | None = None
-    late_events_total: ThresholdPair | None = None
-    out_of_order_events_total: ThresholdPair | None = None
+    late_event_rate: ThresholdPair | None = None
 
     def as_dict(self) -> dict[str, ThresholdPair]:
         """Возвращает настроенные пороги с именами Prometheus-метрик."""
@@ -43,8 +42,7 @@ class StreamThresholds:
             "drift_window_time_span_seconds": self.window_time_span_seconds,
             "drift_max_event_gap_seconds": self.max_event_gap_seconds,
             "drift_invalid_event_time_rate": self.invalid_event_time_rate,
-            "drift_late_events_total": self.late_events_total,
-            "drift_out_of_order_events_total": self.out_of_order_events_total,
+            "drift_late_event_rate": self.late_event_rate,
         }
         return {name: pair for name, pair in pairs.items() if pair is not None}
 
@@ -54,8 +52,7 @@ _STREAM_CONFIG_FIELDS = {
     "drift_window_time_span_seconds": "window_time_span_seconds",
     "drift_max_event_gap_seconds": "max_event_gap_seconds",
     "drift_invalid_event_time_rate": "invalid_event_time_rate",
-    "drift_late_events_total": "late_events_total",
-    "drift_out_of_order_events_total": "out_of_order_events_total",
+    "drift_late_event_rate": "late_event_rate",
 }
 
 
@@ -95,6 +92,7 @@ class StreamSnapshot:
     window_time_span_seconds: float
     max_event_gap_seconds: float
     invalid_event_time_rate: float
+    late_event_rate: float
     late_events_total: int
     out_of_order_events_total: int
 
@@ -105,7 +103,7 @@ class StreamSnapshot:
 class StreamTracker:
     """Считает технические метрики качества текущего окна.
 
-    Window-local invalid-rate сбрасывается после успешного анализа.
+    Window-local invalid/late rates сбрасываются после успешного анализа.
     Накопительные late/out-of-order counters сохраняются до остановки процесса.
     """
 
@@ -122,6 +120,7 @@ class StreamTracker:
 
         self._window_observations = 0
         self._invalid_event_times = 0
+        self._late_events_window = 0
 
         self._late_events_total = 0
         self._out_of_order_events_total = 0
@@ -132,6 +131,7 @@ class StreamTracker:
         """Сбрасывает метрики, относящиеся только к текущему окну."""
         self._window_observations = 0
         self._invalid_event_times = 0
+        self._late_events_window = 0
 
     def record_invalid_event_time(self) -> None:
         """Учитывает событие с невалидным event_time в текущем окне."""
@@ -152,6 +152,7 @@ class StreamTracker:
         )
 
         if is_late:
+            self._late_events_window += 1
             self._late_events_total += 1
         if is_out_of_order:
             self._out_of_order_events_total += 1
@@ -184,7 +185,12 @@ class StreamTracker:
                 )
             )
 
-        invalid_rate = self._rate(self._invalid_event_times)
+        valid_events = self._window_observations - self._invalid_event_times
+        invalid_rate = self._rate(
+            self._invalid_event_times,
+            self._window_observations,
+        )
+        late_rate = self._rate(self._late_events_window, valid_events)
 
         status = -1
         configured_thresholds = self.thresholds.as_dict()
@@ -195,10 +201,7 @@ class StreamTracker:
                 "drift_window_time_span_seconds": max(window_time_span, 0.0),
                 "drift_max_event_gap_seconds": max(max_event_gap, 0.0),
                 "drift_invalid_event_time_rate": invalid_rate,
-                "drift_late_events_total": float(self._late_events_total),
-                "drift_out_of_order_events_total": float(
-                    self._out_of_order_events_total
-                ),
+                "drift_late_event_rate": late_rate,
             }
             for metric, pair in configured_thresholds.items():
                 statuses.append(self._status(values[metric], pair))
@@ -210,14 +213,16 @@ class StreamTracker:
             window_time_span_seconds=max(window_time_span, 0.0),
             max_event_gap_seconds=max(max_event_gap, 0.0),
             invalid_event_time_rate=invalid_rate,
+            late_event_rate=late_rate,
             late_events_total=self._late_events_total,
             out_of_order_events_total=self._out_of_order_events_total,
         )
 
-    def _rate(self, count: int) -> float:
-        if self._window_observations == 0:
+    @staticmethod
+    def _rate(count: int, total: int) -> float:
+        if total == 0:
             return 0.0
-        return count / self._window_observations
+        return count / total
 
     @staticmethod
     def _status(value: float, thresholds: ThresholdPair) -> int:

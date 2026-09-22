@@ -113,6 +113,11 @@ class PrometheusExporter:
             "Configured number of accepted events in one analysis window",
             registry=self.registry,
         )
+        self.current_window_events = Gauge(
+            "drift_current_window_events",
+            "Number of accepted events currently collected in the window",
+            registry=self.registry,
+        )
         self.events_processed = Counter(
             "drift_events_processed",
             "Successfully accepted Kafka events",
@@ -182,6 +187,11 @@ class PrometheusExporter:
         self.invalid_event_time_rate = Gauge(
             "drift_invalid_event_time_rate",
             "Share of records with invalid event_time since the last analysis",
+            registry=self.registry,
+        )
+        self.late_event_rate = Gauge(
+            "drift_late_event_rate",
+            "Share of late events in the current analysis window",
             registry=self.registry,
         )
         self.late_events = Counter(
@@ -319,6 +329,7 @@ class PrometheusExporter:
         self.overall_status.set(-1)
         self.active_alerts.set(0)
         self.window_size.set(0)
+        self.current_window_events.set(0)
         self.stream_status.set(-1)
         self.last_analysis_age_seconds.set(-1)
         self.report_timestamp.set(0)
@@ -354,6 +365,12 @@ class PrometheusExporter:
         if window_size <= 0:
             raise ValueError("window_size must be positive")
         self.window_size.set(window_size)
+
+    def set_current_window_events(self, count: int) -> None:
+        """Публикует фактическое число событий в текущем окне."""
+        if count < 0:
+            raise ValueError("current window event count must be non-negative")
+        self.current_window_events.set(count)
 
     def record_processed_event(self) -> None:
         """Увеличивает счётчик принятых Kafka-событий."""
@@ -409,6 +426,7 @@ class PrometheusExporter:
         self.window_time_span_seconds.set(snapshot.window_time_span_seconds)
         self.max_event_gap_seconds.set(snapshot.max_event_gap_seconds)
         self.invalid_event_time_rate.set(snapshot.invalid_event_time_rate)
+        self.late_event_rate.set(snapshot.late_event_rate)
 
         late_delta = snapshot.late_events_total - self._last_late_events
         if late_delta > 0:

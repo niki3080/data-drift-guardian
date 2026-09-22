@@ -2,7 +2,7 @@ from enum import StrEnum
 from typing import ClassVar, Dict, List, Optional
 
 import yaml
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class FeatureType(StrEnum):
@@ -137,13 +137,14 @@ class PredictionMetricsConfig(TypedMetricsConfig):
 class StreamDriftConfig(BaseModel):
     """Пороговые настройки технических метрик realtime-потока."""
 
+    model_config = ConfigDict(extra="forbid")
+
     drift_stream_status: Optional[ThresholdPair] = None
     drift_event_time_lag_seconds: Optional[ThresholdPair] = None
     drift_window_time_span_seconds: Optional[ThresholdPair] = None
     drift_max_event_gap_seconds: Optional[ThresholdPair] = None
     drift_invalid_event_time_rate: Optional[ThresholdPair] = None
-    drift_late_events_total: Optional[ThresholdPair] = None
-    drift_out_of_order_events_total: Optional[ThresholdPair] = None
+    drift_late_event_rate: Optional[ThresholdPair] = None
 
     @model_validator(mode="after")
     def validate_thresholds(self):
