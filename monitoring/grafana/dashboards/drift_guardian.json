@@ -4,24 +4,24 @@
   "metadata": {
     "name": "ad42z5h",
     "namespace": "default",
-    "uid": "54a319ad-2d73-4176-a384-4e61cd3b16af",
-    "resourceVersion": "1790071054188989",
-    "generation": 14,
-    "creationTimestamp": "2026-09-21T20:38:49Z",
+    "uid": "dcbea6ed-41a3-40f7-947b-04bba9b6d2d9",
+    "resourceVersion": "1790178977730019",
+    "generation": 21,
+    "creationTimestamp": "2026-09-22T10:52:40Z",
     "labels": {
-      "grafana.app/deprecatedInternalID": "3458055368462336"
+      "grafana.app/deprecatedInternalID": "3664860870725632"
     },
     "annotations": {
-      "grafana.app/createdBy": "access-policy:service",
+      "grafana.app/createdBy": "user:ffxsix44g20owe",
       "grafana.app/managedBy": "classic-file-provisioning",
       "grafana.app/managerAllowsEdits": "true",
       "grafana.app/managerId": "drift-guardian",
       "grafana.app/saved-from-ui": "Grafana v13.2.1 (56cd3e9288)",
-      "grafana.app/sourceChecksum": "a89217a94c16f3b9a597d4baff954fa5",
+      "grafana.app/sourceChecksum": "a1daa756721d881030c1e2107c958ddc",
       "grafana.app/sourcePath": "/var/lib/grafana/dashboards/drift_guardian.json",
-      "grafana.app/sourceTimestamp": "1790023072000",
+      "grafana.app/sourceTimestamp": "1790141274000",
       "grafana.app/updatedBy": "user:ffxsix44g20owe",
-      "grafana.app/updatedTimestamp": "2026-09-22T09:57:34Z"
+      "grafana.app/updatedTimestamp": "2026-09-23T15:56:17Z"
     }
   },
   "spec": {
@@ -1926,7 +1926,7 @@
                         "color": {
                           "fixed": "text"
                         },
-                        "size": 26,
+                        "size": 22,
                         "text": {
                           "field": "event_time_lag",
                           "fixed": "",
@@ -1941,7 +1941,7 @@
                       "links": [],
                       "name": "Latest event lag",
                       "placement": {
-                        "height": 45,
+                        "height": 30,
                         "left": 0,
                         "rotation": 0,
                         "top": 20,
@@ -2117,7 +2117,7 @@
                         "color": {
                           "fixed": "#ccccdb80"
                         },
-                        "size": 12,
+                        "size": 14,
                         "text": {
                           "fixed": "Invalid timestamps"
                         },
@@ -2155,7 +2155,7 @@
                         "color": {
                           "fixed": "text"
                         },
-                        "size": 26,
+                        "size": 22,
                         "text": {
                           "field": "invalid_event_time_rate",
                           "fixed": "",
@@ -2170,7 +2170,7 @@
                       "links": [],
                       "name": "invalid_event_time_rate",
                       "placement": {
-                        "height": 45,
+                        "height": 30,
                         "left": 0,
                         "rotation": 0,
                         "top": 20,
@@ -2760,6 +2760,433 @@
                       {
                         "id": "unit",
                         "value": "locale"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "transparent": true
+        }
+      },
+      "panel-112": {
+        "kind": "Panel",
+        "spec": {
+          "id": 112,
+          "title": "",
+          "description": "ROC AUC of the adversarial validation classifier. Higher values indicate stronger separation between reference and current data.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_late_event_rate or on() vector(-1)",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "late_event_rate",
+                        "range": false
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "max(\n  (\n    ((drift_late_event_rate or on() vector(-1)) \n    >= bool \n    scalar(drift_stream_threshold{metric=\"drift_late_event_rate\", level=\"warning\"}))\n    + on()\n    ((drift_late_event_rate or on() vector(-1)) \n    >= bool \n    scalar(drift_stream_threshold{metric=\"drift_late_event_rate\", level=\"critical\"}))\n  )\n  or on() vector(-1)\n)\n",
+                        "format": "time_series",
+                        "instant": true,
+                        "legendFormat": "late_event_status",
+                        "range": false
+                      }
+                    },
+                    "refId": "B",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "drift_event_time_lag_seconds or on() vector(-1)",
+                        "instant": true,
+                        "legendFormat": "event_time_lag",
+                        "range": false
+                      }
+                    },
+                    "refId": "C",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "cfxnbdacrd728d"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "max(\n  (\n    ((drift_event_time_lag_seconds or on() vector(-1)) \n    >= bool \n    scalar(drift_stream_threshold{metric=\"drift_event_time_lag_seconds\", level=\"warning\"}))\n    + on()\n    ((drift_event_time_lag_seconds or on() vector(-1)) \n    >= bool \n    scalar(drift_stream_threshold{metric=\"drift_event_time_lag_seconds\", level=\"critical\"}))\n  )\n  or on() vector(-1)\n)\n",
+                        "instant": true,
+                        "legendFormat": "event_time_lag_status",
+                        "range": false
+                      }
+                    },
+                    "refId": "D",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "canvas",
+            "version": "13.2.1",
+            "spec": {
+              "options": {
+                "inlineEditing": true,
+                "panZoom": false,
+                "root": {
+                  "background": {
+                    "color": {
+                      "fixed": "transparent"
+                    }
+                  },
+                  "border": {
+                    "color": {
+                      "fixed": "dark-green"
+                    }
+                  },
+                  "constraint": {
+                    "horizontal": "left",
+                    "vertical": "top"
+                  },
+                  "elements": [
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "#ccccdb80"
+                        },
+                        "size": 12,
+                        "text": {
+                          "fixed": "Late event rate"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "late_event_rate label",
+                      "placement": {
+                        "height": 24,
+                        "left": 0,
+                        "rotation": 0,
+                        "top": 0,
+                        "width": 100
+                      },
+                      "type": "text"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "field": "late_event_status",
+                          "fixed": "#000000"
+                        },
+                        "size": 20,
+                        "text": {
+                          "field": "late_event_rate",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "connections": [],
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "late_event_rate",
+                      "placement": {
+                        "height": 35,
+                        "left": 0,
+                        "rotation": 0,
+                        "top": 18,
+                        "width": 95
+                      },
+                      "type": "metric-value"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "fixed": "#ccccdb80"
+                        },
+                        "size": 12,
+                        "text": {
+                          "fixed": "Event time lag"
+                        },
+                        "valign": "middle"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "event_time_lag label",
+                      "placement": {
+                        "height": 24,
+                        "left": 100,
+                        "rotation": 0,
+                        "top": 0,
+                        "width": 100
+                      },
+                      "type": "text"
+                    },
+                    {
+                      "background": {
+                        "color": {
+                          "fixed": "transparent"
+                        }
+                      },
+                      "border": {
+                        "color": {
+                          "fixed": "dark-green"
+                        }
+                      },
+                      "config": {
+                        "align": "left",
+                        "color": {
+                          "field": "event_time_lag_status",
+                          "fixed": "#000000"
+                        },
+                        "size": 20,
+                        "text": {
+                          "field": "event_time_lag",
+                          "fixed": "",
+                          "mode": "field"
+                        },
+                        "valign": "middle"
+                      },
+                      "constraint": {
+                        "horizontal": "left",
+                        "vertical": "top"
+                      },
+                      "links": [],
+                      "name": "event_time_lag",
+                      "placement": {
+                        "height": 35,
+                        "left": 100,
+                        "rotation": 0,
+                        "top": 18,
+                        "width": 95
+                      },
+                      "type": "metric-value"
+                    }
+                  ],
+                  "name": "Element 1789458055746",
+                  "placement": {
+                    "height": 100,
+                    "left": 0,
+                    "rotation": 0,
+                    "top": 0,
+                    "width": 100
+                  },
+                  "type": "frame"
+                },
+                "showAdvancedTypes": true,
+                "tooltip": {
+                  "disableForOneClick": false,
+                  "mode": "none"
+                },
+                "zoomToContent": false
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "fixed"
+                  }
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "late_event_status"
+                    },
+                    "properties": [
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "0": {
+                                "color": "text",
+                                "index": 0
+                              },
+                              "1": {
+                                "color": "semi-dark-orange",
+                                "index": 1
+                              },
+                              "2": {
+                                "color": "semi-dark-red",
+                                "index": 2
+                              },
+                              "-1": {
+                                "color": "text",
+                                "index": 3
+                              }
+                            },
+                            "type": "value"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "late_event_rate"
+                    },
+                    "properties": [
+                      {
+                        "id": "decimals",
+                        "value": 2
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "event_time_lag"
+                    },
+                    "properties": [
+                      {
+                        "id": "unit",
+                        "value": "s"
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "event_time_lag_status"
+                    },
+                    "properties": [
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "0": {
+                                "color": "text",
+                                "index": 0
+                              },
+                              "1": {
+                                "color": "semi-dark-orange",
+                                "index": 1
+                              },
+                              "2": {
+                                "color": "semi-dark-red",
+                                "index": 2
+                              },
+                              "-1": {
+                                "color": "#ccccdb80",
+                                "index": 3
+                              }
+                            },
+                            "type": "value"
+                          }
+                        ]
                       }
                     ]
                   }
@@ -6815,7 +7242,7 @@
                         "color": {
                           "fixed": "text"
                         },
-                        "size": 26,
+                        "size": 22,
                         "text": {
                           "field": "window span",
                           "fixed": "",
@@ -6831,7 +7258,7 @@
                       "links": [],
                       "name": "Window span",
                       "placement": {
-                        "height": 45,
+                        "height": 30,
                         "left": 0,
                         "rotation": 0,
                         "top": 20,
@@ -7073,7 +7500,7 @@
                         "color": {
                           "fixed": "text"
                         },
-                        "size": 26,
+                        "size": 22,
                         "text": {
                           "field": "max event gap",
                           "fixed": "",
@@ -7088,7 +7515,7 @@
                       "links": [],
                       "name": "Max event gap value",
                       "placement": {
-                        "height": 45,
+                        "height": 30,
                         "left": 0,
                         "rotation": 0,
                         "top": 20,
@@ -10773,9 +11200,9 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(\n  up\n  and on (job, instance)\n  drift_stream_status\n)\nor vector(0)",
+                        "expr": "max(up{job=\"drift-exporter\"})\nor on() vector(-1)",
                         "instant": false,
-                        "legendFormat": "Exported status",
+                        "legendFormat": "Exporter UP",
                         "range": true
                       }
                     },
@@ -10841,7 +11268,7 @@
                     "matcher": {
                       "id": "byName",
                       "scope": "series",
-                      "options": "Exported status"
+                      "options": "Exporter UP"
                     },
                     "properties": [
                       {
@@ -10850,7 +11277,7 @@
                           {
                             "options": {
                               "0": {
-                                "color": "#ccccdb1a",
+                                "color": "#c4162a66",
                                 "index": 0,
                                 "text": "Down"
                               },
@@ -10858,6 +11285,11 @@
                                 "color": "#55a64b66",
                                 "index": 1,
                                 "text": "Up"
+                              },
+                              "-1": {
+                                "color": "#ccccdb1a",
+                                "index": 2,
+                                "text": "No data"
                               }
                             },
                             "type": "value"
@@ -12688,7 +13120,7 @@
                                 "spec": {
                                   "x": 6,
                                   "y": 0,
-                                  "width": 5,
+                                  "width": 6,
                                   "height": 3,
                                   "element": {
                                     "kind": "ElementReference",
@@ -12699,9 +13131,9 @@
                               {
                                 "kind": "GridLayoutItem",
                                 "spec": {
-                                  "x": 11,
+                                  "x": 12,
                                   "y": 0,
-                                  "width": 3,
+                                  "width": 5,
                                   "height": 2,
                                   "element": {
                                     "kind": "ElementReference",
@@ -12712,9 +13144,22 @@
                               {
                                 "kind": "GridLayoutItem",
                                 "spec": {
-                                  "x": 14,
+                                  "x": 17,
                                   "y": 0,
-                                  "width": 3,
+                                  "width": 5,
+                                  "height": 2,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-110"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 12,
+                                  "y": 2,
+                                  "width": 5,
                                   "height": 2,
                                   "element": {
                                     "kind": "ElementReference",
@@ -12726,8 +13171,8 @@
                                 "kind": "GridLayoutItem",
                                 "spec": {
                                   "x": 17,
-                                  "y": 0,
-                                  "width": 3,
+                                  "y": 2,
+                                  "width": 5,
                                   "height": 2,
                                   "element": {
                                     "kind": "ElementReference",
@@ -12738,13 +13183,17 @@
                               {
                                 "kind": "GridLayoutItem",
                                 "spec": {
-                                  "x": 20,
-                                  "y": 0,
-                                  "width": 3,
+                                  "x": 0,
+                                  "y": 3,
+                                  "width": 5,
                                   "height": 2,
                                   "element": {
                                     "kind": "ElementReference",
-                                    "name": "panel-110"
+                                    "name": "panel-112"
+                                  },
+                                  "repeat": {
+                                    "mode": "variable",
+                                    "value": "prediction_metric"
                                   }
                                 }
                               }
@@ -12757,7 +13206,7 @@
                       "kind": "RowsLayoutRow",
                       "spec": {
                         "title": "Stream Over Time",
-                        "collapse": true,
+                        "collapse": false,
                         "hideHeader": false,
                         "layout": {
                           "kind": "GridLayout",
@@ -12840,7 +13289,7 @@
             "kind": "RowsLayoutRow",
             "spec": {
               "title": "Input Data Drift⠀·⠀Last completed analysis",
-              "collapse": true,
+              "collapse": false,
               "hideHeader": false,
               "layout": {
                 "kind": "RowsLayout",
@@ -12949,7 +13398,7 @@
             "kind": "RowsLayoutRow",
             "spec": {
               "title": "Feature-level Drift⠀·⠀Last completed analysis",
-              "collapse": true,
+              "collapse": false,
               "hideHeader": false,
               "fillScreen": false,
               "layout": {

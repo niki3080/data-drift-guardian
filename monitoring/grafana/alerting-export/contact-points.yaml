@@ -1,0 +1,16 @@
+apiVersion: 1
+contactPoints:
+    - orgId: 1
+      name: Drift Guardian Alerts Telegram
+      receivers:
+        - uid: bfz1bo1hlidxcc
+          type: telegram
+          settings:
+            bottoken: 8636338707:AAFL4id1ofrM6jWHFEqOsM6hqZ3EuGxTu0s
+            chatid: "-5433199058"
+            disable_notifications: false
+            disable_web_page_preview: false
+            message: '{{ template "drift_guardian.message" . }}'
+            parse_mode: HTML
+            protect_content: false
+          disableResolveMessage: false
