@@ -164,15 +164,16 @@ drift_current_window_events
 `sum()` объединяет временные ряды, а округление выполняется после суммирования:
 
 ```promql
-round(sum(increase(drift_events_processed_total[$__range]))) or on() vector(0)
-round(sum(increase(drift_analysis_runs_total[$__range]))) or on() vector(0)
-round(sum(increase(drift_out_of_order_events_total[$__range]))) or on() vector(0)
-round(sum(increase(drift_late_events_total[$__range]))) or on() vector(0)
+round(sum(increase(drift_events_processed_total[$__range]))) or on() vector(-999)
+round(sum(increase(drift_analysis_runs_total[$__range]))) or on() vector(-999)
+round(sum(increase(drift_out_of_order_events_total[$__range]))) or on() vector(-999)
+round(sum(increase(drift_late_events_total[$__range]))) or on() vector(-999)
 ```
 
 Поэтому значение за выбранный период может быть больше текущего значения
 `Since exporter start`, если диапазон включает события до последнего перезапуска
-или несколько временных рядов.
+или несколько временных рядов. Служебное значение `-999` отображается в панели
+как отсутствие данных.
 
 ## Drift report и Prometheus
 
@@ -386,6 +387,13 @@ docker compose --profile mock ps -a
 Mock содержит 20 признаков и prediction, смешанные статусы, изменение metric
 values между анализами, demo AV и циклический stream status.
 
+Late-события в mock генерируются из того же потока, из которого рассчитывается
+`drift_late_event_rate`: nominal rate составляет `2.5%` в warning-фазе и около
+`8.3%` в critical-фазе. `drift_late_events_total` увеличивается только для этих
+же событий и не сбрасывается между окнами. Out-of-order события генерируются с
+nominal rate `1%` и `4%` соответственно. На границе фаз текущее окно может
+содержать события из двух фаз, поэтому его фактическая доля меняется плавно.
+
 После запуска доступны:
 
 - Grafana: `http://localhost:3000`;
@@ -501,7 +509,7 @@ docker compose logs --tail=100 analyzer
 
 ```powershell
 curl.exe -s http://localhost:8000/metrics |
-  Select-String "drift_current_window_events|drift_window_size|drift_events_processed_total|drift_analysis_runs_total|drift_stream_status|drift_av_roc_auc"
+  Select-String "drift_current_window_events|drift_window_size|drift_events_processed_total|drift_analysis_runs_total|drift_late_event_rate|drift_stream_status|drift_av_roc_auc"
 ```
 
 После первого полного окна:
@@ -510,6 +518,8 @@ curl.exe -s http://localhost:8000/metrics |
 - `drift_analysis_runs_total` должен быть больше `0`;
 - `drift_current_window_events` должен находиться в диапазоне от `0` до
   `drift_window_size` и сбрасываться после полного окна;
+- `drift_late_event_rate` должен отражать долю late-событий текущего окна и
+  сбрасываться после полного окна;
 - `drift_av_available` должен стать `1`, если AV включён;
 - `drift_av_feature_importance` должен содержать хотя бы один признак;
 - targets Prometheus `prometheus` и `drift-exporter` должны быть `UP`.

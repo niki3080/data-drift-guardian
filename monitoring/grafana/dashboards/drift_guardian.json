@@ -2060,7 +2060,7 @@
                         "range": false
                       }
                     },
-                    "refId": "G - max event gap",
+                    "refId": "A - invalid timestamp rate",
                     "hidden": false
                   }
                 }
@@ -2117,7 +2117,7 @@
                         "color": {
                           "fixed": "#ccccdb80"
                         },
-                        "size": 14,
+                        "size": 12,
                         "text": {
                           "fixed": "Invalid timestamps"
                         },
@@ -2276,7 +2276,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(round(increase(drift_events_processed_total[$__range]))) \nor on() vector(-999)",
+                        "expr": "round(sum(increase(drift_events_processed_total[$__range])))\nor on() vector(-999)",
                         "instant": true,
                         "legendFormat": "events_processed_period",
                         "range": false
@@ -2421,7 +2421,7 @@
                         "vertical": "top"
                       },
                       "links": [],
-                      "name": "Lave events",
+                      "name": "Late events",
                       "placement": {
                         "height": 26,
                         "left": 172,
@@ -6083,7 +6083,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "# approximation\n(\n  sum(drift_events_processed_total) \n  - \n  (sum(drift_analysis_runs_total) * max(drift_window_size))\n) \nor on() vector(-999)",
+                        "expr": "max(drift_current_window_events)\nor on() vector(-999)",
                         "format": "time_series",
                         "instant": true,
                         "legendFormat": "calculated_window_fill",
@@ -6131,7 +6131,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "# approximation\n(\n  100 * \n  (\n    sum(drift_events_processed_total)\n    -\n    sum(drift_analysis_runs_total) * max(drift_window_size)\n  )\n  /\n  max(drift_window_size)\n) \nor on() vector(-999)",
+                        "expr": "(\n  100 * max(drift_current_window_events)\n  /\n  max(drift_window_size)\n)\nor on() vector(-999)",
                         "instant": true,
                         "legendFormat": "calculated_window_fill_percent",
                         "range": false
@@ -6154,13 +6154,13 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "# approximation\n(\n  max(drift_window_size)\n  -\n  (\n    sum(drift_events_processed_total)\n    -\n    sum(drift_analysis_runs_total) * max(drift_window_size)\n  )\n)\n/\nscalar(\n  max(rate(drift_events_processed_total[5m])) > 0\n  or\n  max(rate(drift_events_processed_total[1h])) > 0\n  or\n  vector(0.0001)\n)\nor on() vector(-1)",
+                        "expr": "(\n  max(drift_window_size)\n  -\n  max(drift_current_window_events)\n)\n/\nscalar(\n  max(rate(drift_events_processed_total[5m])) > 0\n  or\n  max(rate(drift_events_processed_total[1h])) > 0\n  or\n  vector(0.0001)\n)\nor on() vector(-1)",
                         "instant": true,
                         "legendFormat": "calculated_ETA",
                         "range": false
                       }
                     },
-                    "refId": "D - calcilated ETA",
+                    "refId": "D - calculated ETA",
                     "hidden": false
                   }
                 },
@@ -7266,29 +7266,6 @@
                       }
                     },
                     "refId": "D",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "cfxnbdacrd728d"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "exemplar": false,
-                        "expr": "drift_late_events_total or on() vector(-999)",
-                        "instant": true,
-                        "legendFormat": "process_start_time",
-                        "range": false
-                      }
-                    },
-                    "refId": "E",
                     "hidden": false
                   }
                 }
@@ -12842,14 +12819,14 @@
                       },
                       "spec": {
                         "qryType": 5,
-                        "query": "query_result(min(process_start_time_seconds * 1000))",
+                        "query": "query_result(max(process_start_time_seconds{job=\"drift-exporter\"}) * 1000)",
                         "refId": "PrometheusVariableQueryEditor-VariableQuery"
                       }
                     },
                     "regex": "/(\\d+)\\s+\\d+$/",
                     "regexApplyTo": "value",
                     "sort": "disabled",
-                    "definition": "query_result(min(process_start_time_seconds * 1000))",
+                    "definition": "query_result(max(process_start_time_seconds{job=\"drift-exporter\"}) * 1000)",
                     "options": [],
                     "multi": false,
                     "includeAll": false,

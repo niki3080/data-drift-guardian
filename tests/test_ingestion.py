@@ -223,15 +223,16 @@ def test_stream_status_is_insufficient_without_configured_thresholds() -> None:
     assert snapshot.status == -1
 
 
-def test_stream_status_uses_cumulative_late_events_total() -> None:
+def test_stream_status_uses_current_window_late_event_rate() -> None:
     tracker = StreamTracker(
         late_event_threshold_seconds=1,
         thresholds=StreamThresholds(
             event_time_lag_seconds=ThresholdPair(100, 200),
-            late_events_total=ThresholdPair(1, 2),
+            late_event_rate=ThresholdPair(0.5, 0.75),
         ),
     )
     now = datetime.now(UTC)
+    tracker.record_invalid_event_time()
 
     first = KafkaEvent.from_dict(
         {
@@ -242,20 +243,42 @@ def test_stream_status_uses_cumulative_late_events_total() -> None:
     )
     tracker.observe(first)
     assert tracker.snapshot([first.event_time], ready=False).status == -1
-    assert tracker.snapshot([first.event_time], ready=True).status == 1
+    critical = tracker.snapshot([first.event_time], ready=True)
+    assert critical.late_event_rate == 1.0
+    assert critical.status == 2
 
-    second = KafkaEvent.from_dict(
+    on_time = KafkaEvent.from_dict(
         {
             "event_id": 2,
-            "event_time": (now - timedelta(seconds=4)).isoformat(),
+            "event_time": now.isoformat(),
             "value": 2,
         }
     )
-    tracker.observe(second)
-    assert tracker.snapshot(
-        [first.event_time, second.event_time],
+    tracker.observe(on_time)
+    warning = tracker.snapshot(
+        [first.event_time, on_time.event_time],
         ready=True,
-    ).status == 2
+    )
+    assert warning.late_event_rate == 0.5
+    assert warning.status == 1
+
+    tracker.reset_window()
+    recovered = tracker.snapshot([], ready=True)
+    assert recovered.late_event_rate == 0.0
+    assert recovered.status == 0
+
+    second_late = KafkaEvent.from_dict(
+        {
+            "event_id": 3,
+            "event_time": (now - timedelta(seconds=4)).isoformat(),
+            "value": 3,
+        }
+    )
+    tracker.observe(second_late)
+    next_window = tracker.snapshot([second_late.event_time], ready=True)
+    assert next_window.late_event_rate == 1.0
+    assert next_window.late_events_total == 2
+    assert next_window.status == 2
 
 
 def test_lifetime_counters_survive_window_reset() -> None:
@@ -287,6 +310,27 @@ def test_lifetime_counters_survive_window_reset() -> None:
     assert after.late_events_total == 2
     assert after.out_of_order_events_total == 1
     assert after.invalid_event_time_rate == 0.0
+    assert after.late_event_rate == 0.0
+
+
+def test_prometheus_exporter_tracks_current_window_events() -> None:
+    registry = CollectorRegistry()
+    exporter = PrometheusExporter(registry)
+
+    initial_metrics = generate_latest(registry).decode("utf-8")
+    assert "drift_current_window_events 0.0" in initial_metrics
+    assert "drift_late_event_rate 0.0" in initial_metrics
+
+    exporter.set_current_window_events(346)
+    metrics = generate_latest(registry).decode("utf-8")
+    assert "drift_current_window_events 346.0" in metrics
+
+    exporter.set_current_window_events(0)
+    reset_metrics = generate_latest(registry).decode("utf-8")
+    assert "drift_current_window_events 0.0" in reset_metrics
+
+    with pytest.raises(ValueError, match="non-negative"):
+        exporter.set_current_window_events(-1)
 
 
 def test_reference_profile_exports_only_agreed_metadata() -> None:

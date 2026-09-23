@@ -245,6 +245,7 @@ def run(
                 continue
 
             window.append(event)
+            exporter.set_current_window_events(len(window))
             stream.observe(event)
             exporter.record_processed_event()
             consumer.store_offsets(message=message)
@@ -271,7 +272,14 @@ def run(
                 # затем начинаем собирать следующее непересекающееся окно.
                 consumer.commit(asynchronous=False)
                 window.clear()
+                exporter.set_current_window_events(len(window))
                 stream.reset_window()
+                exporter.update_stream(
+                    stream.snapshot(
+                        window.event_times(),
+                        ready=completed_analyses > 0,
+                    )
+                )
     finally:
         consumer.close()
         metrics_server.shutdown()

@@ -11,10 +11,6 @@ from drift_guardian.batch.adversarial_validation import (
     adversarial_validation,
 )
 
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/feature/second-part-realtime-pipeline
 adversarial_module = importlib.import_module(
     "drift_guardian.batch.adversarial_validation"
 )
