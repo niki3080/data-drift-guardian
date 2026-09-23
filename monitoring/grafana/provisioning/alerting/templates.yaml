@@ -1,0 +1,79 @@
+apiVersion: 1
+
+templates:
+  - orgId: 1
+    name: drift_guardian
+    template: |
+      {{ define "drift_guardian.message" }}
+
+      {{/* ================= NO DATA ================= */}}
+      {{ if eq (index .CommonLabels "alertname") "DatasourceNoData" }}
+
+      {{ range .Alerts }}
+      {{ if eq .Status "firing" }}⚪️ <b>NO DATA</b>
+
+      No current data was returned for:
+      <b>{{ index .Labels "rulename" }}</b>
+
+      Check Prometheus and the realtime exporter.
+      {{ else }}✅ <b>DATA RESTORED</b>
+
+      Data is available again for:
+      <b>{{ index .Labels "rulename" }}</b>
+      {{ end }}
+      {{ end }}
+
+      {{/* ================= LIST ALERT ================= */}}
+      {{ else if eq (index .CommonLabels "scope") "list" }}
+
+      {{ $severity := index .CommonLabels "severity" }}
+      {{ $listLabel := index .CommonAnnotations "list_label" }}
+      {{ $listTitle := index .CommonAnnotations "list_title" }}
+
+      {{ if gt (len .Alerts.Firing) 0 }}
+      {{ if eq $severity "critical" }}🔴 <b>CRITICAL ALERT</b>{{ else if eq $severity "warning" }}🟠 <b>WARNING</b>{{ else }}🔔 <b>ALERT</b>{{ end }}
+      <b>{{ index .CommonLabels "alertname" }}</b>
+
+      {{ with index .CommonAnnotations "summary" }}{{ . }}
+
+      {{ end }}<b>{{ $listTitle }}:</b>
+      {{ range .Alerts.Firing }}• <code>{{ index .Labels $listLabel }}</code>{{ with index .Annotations "list_value" }}: <code>{{ . }}</code>{{ end }}
+      {{ end }}
+      {{ with index .CommonAnnotations "action" }}<b>Action:</b> {{ . }}{{ end }}
+      {{ end }}
+
+      {{ if gt (len .Alerts.Resolved) 0 }}
+      ✅ <b>RESOLVED</b>
+      <b>{{ index .CommonLabels "alertname" }}</b>
+
+      The alert condition is no longer met for:
+      {{ range .Alerts.Resolved }}• <code>{{ index .Labels $listLabel }}</code>
+      {{ end }}
+      {{ end }}
+
+      {{/* ================= REGULAR ALERT ================= */}}
+      {{ else }}
+
+      {{ range .Alerts }}
+      {{ if eq .Status "firing" }}
+      {{ if eq (index .Labels "severity") "critical" }}🔴 <b>CRITICAL ALERT</b>{{ else if eq (index .Labels "severity") "warning" }}🟠 <b>WARNING</b>{{ else }}🔔 <b>ALERT</b>{{ end }}
+      <b>{{ index .Labels "alertname" }}</b>
+      {{ with index .Annotations "summary" }}
+      {{ . }}{{ end }}
+      {{ with index .Annotations "description" }}
+      {{ . }}{{ end }}
+      {{ with index .Annotations "action" }}
+      <b>Action:</b> {{ . }}{{ end }}
+
+      {{ else }}
+      ✅ <b>RESOLVED</b>
+      <b>{{ index .Labels "alertname" }}</b>
+
+      The alert condition is no longer met. The current status has returned to normal.
+      {{ with index .Labels "feature" }}
+      <b>Feature:</b> <code>{{ . }}</code>{{ end }}
+      {{ end }}
+      {{ end }}
+
+      {{ end }}{{/* alert type */}}
+      {{ end }}{{/* define */}}

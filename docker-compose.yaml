@@ -81,8 +81,16 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
       GF_AUTH_ANONYMOUS_HIDE_VERSION: "true"
+      
+      # Used by alerting provisioning YAML (token set in .env file)
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
     volumes:
-      - grafana-data:/var/lib/grafana
+      # Grafana data volume backup
+      # - grafana-data:/var/lib/grafana
+
+      # Grafana new test volume with alerting
+      - grafana-data-v2:/var/lib/grafana
+      
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
@@ -149,4 +157,5 @@ services:
       PRODUCER_INTERVAL_SECONDS: ${PRODUCER_INTERVAL_SECONDS:-0.2}
 
 volumes:
-  grafana-data:
+  # grafana-data:
+  grafana-data-v2:
