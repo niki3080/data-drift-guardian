@@ -54,3 +54,21 @@ stream_drift:
     critical: 50
   # остальные поля не заданы — значит не мониторятся
 
+adversarial_validation:
+  enabled: false
+  interval_minutes: 30
+  # все остальное - опционально
+  max_samples: 50000
+  n_splits: 5
+  random_state: 42
+  missing_category: "__missing__"
+  lightgbm:
+    n_estimators: 200
+    learning_rate: 0.03
+    max_depth: 4
+    num_leaves: 15
+    subsample: 0.8
+    colsample_bytree: 0.8
+    reg_alpha: 1.0
+    reg_lambda: 1.0
+    random_state: 42

@@ -35,6 +35,7 @@ def _metric(x: str | Any) -> Any:
     """
     if isinstance(x, MetricEnum):
         return x
+
     return MetricEnum(x)
 
 
@@ -54,6 +55,7 @@ def _is_reversed_threshold_metric(metric_name: str | Any) -> bool:
 
 def _is_time_dtype(s: pd.Series) -> bool:
     dtype = s.dtype
+
     return (
         is_datetime64_any_dtype(dtype)
         or is_timedelta64_dtype(dtype)
@@ -123,6 +125,7 @@ def _default_auto_threshold_floors() -> dict[str, ThresholdLike]:
     для них может быть некорректной. При необходимости их можно задать вручную
     через options.auto_thresholds.floors.
     """
+
     return {
         "missing_rate": {
             "warning": 0.005,  # 0.5%
@@ -216,6 +219,75 @@ class AutoThresholdSettings:
 
 
 @dataclass
+class LightGBMBuildOptions:
+    """
+    Настройки LightGBM для блока adversarial_validation.
+
+    Поля синхронизированы с LightGBMConfig из parse_config.py.
+    None-значения при генерации YAML не пишутся.
+    """
+
+    n_estimators: int = 1_000
+    learning_rate: float = 0.05
+    max_depth: int = 4
+    num_leaves: int = 15
+    importance_type: str = "gain"
+    min_child_samples: int = 20
+    subsample: float = 1.0
+    subsample_freq: int = 0
+    colsample_bytree: float = 1.0
+    reg_alpha: float = 0.0
+    reg_lambda: float = 0.0
+    n_jobs: int = -1
+    random_state: int | None = None
+    class_weight: str | None = None
+    objective: str | None = None
+    boosting_type: str = "gbdt"
+    verbosity: int = -1
+
+    def to_config(self) -> dict[str, Any]:
+        return {
+            k: v
+            for k, v in self.__dict__.items()
+            if v is not None
+        }
+
+
+@dataclass
+class AdversarialValidationBuildOptions:
+    """
+    Настройки генерации блока adversarial_validation.
+
+    Если enabled=True, interval_minutes обязателен — как и в pydantic-схеме.
+
+    emit_when_disabled=True означает, что генератор явно добавит в YAML:
+
+    adversarial_validation:
+      enabled: false
+      ...
+
+    Если поставить emit_when_disabled=False и enabled=False, блок не будет
+    записан вообще, и parse_config.Config применит default_factory.
+    """
+
+    enabled: bool = False
+
+    # Периодичность запуска AV в минутах.
+    # Обязателен только при enabled=True.
+    interval_minutes: int | None = None
+
+    max_samples: int | None = None
+    n_splits: int | None = None
+    random_state: int | None = None
+    missing_category: str | None = "__missing__"
+
+    lightgbm: LightGBMBuildOptions = field(default_factory=LightGBMBuildOptions)
+
+    # Служебная настройка генератора, в итоговый config.yaml не попадает.
+    emit_when_disabled: bool = True
+
+
+@dataclass
 class ConfigBuildOptions:
     # Явный список фичей. Если None — берём все колонки, кроме prediction_score_column.
     include_columns: list[str] | None = None
@@ -228,7 +300,9 @@ class ConfigBuildOptions:
 
     # Явно задать типы фичей.
     # {"country": "categorical", "age": "numeric"}
-    feature_types: dict[str, Literal["numeric", "categorical"]] = field(default_factory=dict)
+    feature_types: dict[str, Literal["numeric", "categorical"]] = field(
+        default_factory=dict
+    )
 
     # Глобальные дефолтные наборы метрик по типам.
     numeric_metrics: list[str] | None = None
@@ -251,7 +325,9 @@ class ConfigBuildOptions:
 
     # Локальные thresholds.
     # {"age": {"psi": {"warning": 0.05, "critical": 0.12}}}
-    feature_thresholds: dict[str, dict[str, ThresholdLike]] = field(default_factory=dict)
+    feature_thresholds: dict[str, dict[str, ThresholdLike]] = field(
+        default_factory=dict
+    )
 
     # Prediction metrics block.
     prediction_enabled: bool = False
@@ -262,6 +338,11 @@ class ConfigBuildOptions:
 
     # Stream drift block напрямую в формате конфига.
     stream_drift: dict[str, ThresholdLike] | None = None
+
+    # Adversarial validation block.
+    adversarial_validation: AdversarialValidationBuildOptions = field(
+        default_factory=AdversarialValidationBuildOptions
+    )
 
     # Profiler settings.
     profiler_window_size: int = 1000
@@ -303,8 +384,9 @@ def build_drift_config(
     """
     Генерирует config dict и при output_path != None сохраняет YAML.
 
-    Возвращает dict, совместимый с твоей pydantic-схемой Config.
+    Возвращает dict, совместимый с pydantic-схемой Config.
     """
+
     if options is None:
         options = ConfigBuildOptions()
 
@@ -327,6 +409,7 @@ def build_drift_config(
         if not metrics:
             if options.drop_features_without_metrics:
                 continue
+
             raise ValueError(f"No metrics left for feature '{col}'")
 
         local_thresholds = _normalize_thresholds_map(
@@ -345,6 +428,7 @@ def build_drift_config(
         used_metrics.update(metrics)
 
     prediction_block = _build_prediction_block(df, options)
+
     if prediction_block.get("enabled", False):
         used_metrics.update(prediction_block["metrics"])
 
@@ -371,6 +455,7 @@ def build_drift_config(
             for feature, metric_map in auto_feature.items():
                 block = feature_configs[feature]
                 block.setdefault("thresholds", {})
+
                 for metric_name, pair in metric_map.items():
                     block["thresholds"].setdefault(metric_name, pair)
 
@@ -380,6 +465,7 @@ def build_drift_config(
             and auto_prediction
         ):
             prediction_block.setdefault("thresholds", {})
+
             for metric_name, pair in auto_prediction.items():
                 prediction_block["thresholds"].setdefault(metric_name, pair)
 
@@ -398,6 +484,12 @@ def build_drift_config(
     stream_drift = _normalize_stream_drift(options.stream_drift)
     if stream_drift:
         config["stream_drift"] = stream_drift
+
+    adversarial_validation = _build_adversarial_validation_block(
+        options.adversarial_validation
+    )
+    if adversarial_validation is not None:
+        config["adversarial_validation"] = adversarial_validation
 
     if output_path is not None:
         with open(output_path, "w", encoding="utf-8") as f:
@@ -440,8 +532,10 @@ def _select_and_infer_features(
         columns = list(df.columns)
     else:
         missing = sorted(set(options.include_columns) - set(df.columns))
+
         if missing:
             raise ValueError(f"include_columns are missing in df: {missing}")
+
         columns = list(options.include_columns)
 
     exclude = set(options.exclude_columns) | set(options.disabled_features)
@@ -461,6 +555,7 @@ def _select_and_infer_features(
         if _is_time_dtype(s):
             if options.drop_time_columns:
                 continue
+
             raise ValueError(
                 f"Column '{col}' has time dtype '{s.dtype}'. "
                 "Profiler does not support time dtypes."
@@ -469,6 +564,7 @@ def _select_and_infer_features(
         if s.isna().all():
             if options.drop_all_missing_columns:
                 continue
+
             raise ValueError(f"Column '{col}' contains only missing values")
 
         if col in options.feature_types:
@@ -507,16 +603,23 @@ def _resolve_metrics_for_feature(
             continue
 
         if not _is_metric_compatible(name, ftype):
-            msg = f"Metric '{name}' is incompatible with feature '{feature}' type '{ftype}'"
+            msg = (
+                f"Metric '{name}' is incompatible with feature "
+                f"'{feature}' type '{ftype}'"
+            )
+
             if options.strict_metric_compatibility:
                 raise ValueError(msg)
+
             warnings.warn(msg + ". Dropping metric.", UserWarning)
             continue
 
         if _metric(name) not in METRIC_REGISTRY:
             msg = f"Metric '{name}' is absent in METRIC_REGISTRY"
+
             if options.strict_metric_registry:
                 raise ValueError(msg)
+
             warnings.warn(msg + ". Dropping metric.", UserWarning)
             continue
 
@@ -532,8 +635,10 @@ def _is_metric_compatible(
 ) -> bool:
     if ftype == "numeric" and metric_name in CATEGORICAL_ONLY_METRICS:
         return False
+
     if ftype == "categorical" and metric_name in NUMERIC_ONLY_METRICS:
         return False
+
     return True
 
 
@@ -545,6 +650,7 @@ def _build_prediction_block(
         return {"enabled": False}
 
     score_col = options.prediction_score_column
+
     if score_col is None:
         raise ValueError("prediction_enabled=True requires prediction_score_column")
 
@@ -554,10 +660,14 @@ def _build_prediction_block(
     s = df[score_col]
 
     if _is_time_dtype(s):
-        raise ValueError(f"prediction_score_column '{score_col}' has unsupported time dtype")
+        raise ValueError(
+            f"prediction_score_column '{score_col}' has unsupported time dtype"
+        )
 
     if s.isna().all():
-        raise ValueError(f"prediction_score_column '{score_col}' contains only missing values")
+        raise ValueError(
+            f"prediction_score_column '{score_col}' contains only missing values"
+        )
 
     if options.prediction_type is not None:
         ptype = options.prediction_type
@@ -576,6 +686,7 @@ def _build_prediction_block(
     disabled = set(options.disabled_metrics)
 
     metrics: list[str] = []
+
     for m in raw_metrics:
         name = _metric_name(m)
 
@@ -584,15 +695,19 @@ def _build_prediction_block(
 
         if not _is_metric_compatible(name, ptype):
             msg = f"Prediction metric '{name}' is incompatible with type '{ptype}'"
+
             if options.strict_metric_compatibility:
                 raise ValueError(msg)
+
             warnings.warn(msg + ". Dropping metric.", UserWarning)
             continue
 
         if _metric(name) not in METRIC_REGISTRY:
             msg = f"Prediction metric '{name}' is absent in METRIC_REGISTRY"
+
             if options.strict_metric_registry:
                 raise ValueError(msg)
+
             warnings.warn(msg + ". Dropping metric.", UserWarning)
             continue
 
@@ -610,6 +725,7 @@ def _build_prediction_block(
     }
 
     thresholds = _normalize_thresholds_map(options.prediction_thresholds)
+
     if thresholds:
         block["thresholds"] = thresholds
 
@@ -633,6 +749,7 @@ def _estimate_missing_thresholds(
     - auto_feature thresholds;
     - auto_prediction thresholds.
     """
+
     num_features = [
         feature
         for feature, block in feature_configs.items()
@@ -645,6 +762,7 @@ def _estimate_missing_thresholds(
     ]
 
     prediction_col = None
+
     if prediction_block.get("enabled", False):
         prediction_col = prediction_block["score_column"]
 
@@ -693,6 +811,7 @@ def _estimate_missing_thresholds(
                     options=options,
                     label=f"feature '{feature}'",
                 )
+
                 if val is None:
                     continue
 
@@ -701,6 +820,7 @@ def _estimate_missing_thresholds(
 
         if prediction_block.get("enabled", False):
             score_col = prediction_block["score_column"]
+
             for metric_name in prediction_block["metrics"]:
                 val = _compute_metric_safe(
                     metric_name=metric_name,
@@ -709,6 +829,7 @@ def _estimate_missing_thresholds(
                     options=options,
                     label="prediction_metrics",
                 )
+
                 if val is None:
                     continue
 
@@ -740,17 +861,21 @@ def _estimate_missing_thresholds(
         for feature, metric_map in feature_values.items():
             for metric_name, vals in metric_map.items():
                 existing_local = feature_configs[feature].get("thresholds", {})
+
                 if metric_name in existing_local:
                     continue
 
-                auto_feature.setdefault(feature, {})[metric_name] = _threshold_from_values(
-                    metric_name=metric_name,
-                    values=vals,
-                    options=options,
+                auto_feature.setdefault(feature, {})[metric_name] = (
+                    _threshold_from_values(
+                        metric_name=metric_name,
+                        values=vals,
+                        options=options,
+                    )
                 )
 
     if prediction_block.get("enabled", False) and options.auto_thresholds.per_prediction:
         existing_local = prediction_block.get("thresholds", {})
+
         for metric_name, vals in prediction_values.items():
             if metric_name in existing_local:
                 continue
@@ -782,10 +907,12 @@ def _iter_calibration_windows(
         if len(df) <= window_size:
             for _ in range(n_windows):
                 yield df
+
             return
 
         max_start = len(df) - window_size
         starts = np.linspace(0, max_start, num=n_windows, dtype=int)
+
         for start in starts:
             yield df.iloc[start : start + window_size]
 
@@ -841,6 +968,7 @@ def _collect_metrics_requiring_global_threshold(
     Даже если часть фич имеет локальные thresholds, проще и надёжнее
     иметь global fallback для каждой используемой метрики.
     """
+
     result: set[str] = set(existing_global_thresholds)
 
     for block in feature_configs.values():
@@ -881,11 +1009,13 @@ def _threshold_from_values(
 
         warning = float(np.quantile(vals, warning_quantile))
         critical = float(np.quantile(vals, critical_quantile))
+
     else:
         warning = float(np.quantile(vals, options.auto_thresholds.warning_quantile))
         critical = float(np.quantile(vals, options.auto_thresholds.critical_quantile))
 
     floor = options.auto_thresholds.floors.get(metric_name)
+
     if floor is not None:
         floor_pair = _normalize_metric_threshold_pair(metric_name, floor)
 
@@ -903,6 +1033,7 @@ def _threshold_from_values(
             # Поэтому для reversed metrics используем заданные значения как cap.
             warning = min(warning, floor_pair["warning"])
             critical = min(critical, floor_pair["critical"])
+
         else:
             # Для обычных метрик большее значение хуже.
             # Floors защищают от бессмысленных нулевых thresholds.
@@ -1015,6 +1146,7 @@ def _normalize_metric_threshold_pair(
             raise ValueError(
                 f"For reversed metric '{name}' warning must be greater than critical: {pair}"
             )
+
     else:
         if warning >= critical:
             raise ValueError(
@@ -1043,10 +1175,70 @@ def _normalize_stream_drift(
         return None
 
     result: dict[str, dict[str, float]] = {}
+
     for name, pair in raw.items():
         result[name] = _normalize_threshold_pair(pair)
 
     return result
+
+
+def _build_adversarial_validation_block(
+    raw: AdversarialValidationBuildOptions,
+) -> dict[str, Any] | None:
+    """
+    Собирает блок adversarial_validation в формате parse_config.Config.
+
+    Правила совместимы с AdversarialValidationConfig:
+    - enabled: bool;
+    - interval_minutes: Optional[int], но обязателен при enabled=True;
+    - max_samples > 0, если задан;
+    - n_splits >= 2, если задан;
+    - lightgbm — вложенный блок параметров модели.
+    """
+
+    if not raw.enabled and not raw.emit_when_disabled:
+        return None
+
+    if raw.enabled and raw.interval_minutes is None:
+        raise ValueError(
+            "adversarial_validation.enabled=True requires "
+            "adversarial_validation.interval_minutes"
+        )
+
+    if raw.interval_minutes is not None and raw.interval_minutes <= 0:
+        raise ValueError("adversarial_validation.interval_minutes must be positive")
+
+    if raw.max_samples is not None and raw.max_samples <= 0:
+        raise ValueError("adversarial_validation.max_samples must be positive")
+
+    if raw.n_splits is not None and raw.n_splits < 2:
+        raise ValueError("adversarial_validation.n_splits must be >= 2")
+
+    block: dict[str, Any] = {
+        "enabled": bool(raw.enabled),
+    }
+
+    if raw.interval_minutes is not None:
+        block["interval_minutes"] = raw.interval_minutes
+
+    if raw.max_samples is not None:
+        block["max_samples"] = raw.max_samples
+
+    if raw.n_splits is not None:
+        block["n_splits"] = raw.n_splits
+
+    if raw.random_state is not None:
+        block["random_state"] = raw.random_state
+
+    if raw.missing_category is not None:
+        block["missing_category"] = raw.missing_category
+
+    lightgbm = raw.lightgbm.to_config()
+
+    if lightgbm:
+        block["lightgbm"] = lightgbm
+
+    return block
 
 
 def _assert_all_thresholds_present(
@@ -1058,12 +1250,14 @@ def _assert_all_thresholds_present(
 
     for feature, block in feature_configs.items():
         local = block.get("thresholds", {})
+
         for metric_name in block["metrics"]:
             if metric_name not in local and metric_name not in global_thresholds:
                 missing.append(f"feature '{feature}' / metric '{metric_name}'")
 
     if prediction_block.get("enabled", False):
         local = prediction_block.get("thresholds", {})
+
         for metric_name in prediction_block["metrics"]:
             if metric_name not in local and metric_name not in global_thresholds:
                 missing.append(f"prediction_metrics / metric '{metric_name}'")
@@ -1072,4 +1266,3 @@ def _assert_all_thresholds_present(
         raise ValueError(
             "Missing thresholds after auto-generation: " + ", ".join(missing)
         )
-

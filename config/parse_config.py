@@ -213,10 +213,81 @@ class StreamDriftConfig(BaseModel):
         return self
 
 
+class LightGBMConfig(BaseModel):
+    """
+    Часто используемые гиперпараметры LightGBM в sklearn API
+    (LGBMClassifier / LGBMRegressor).
+
+    Метод `to_params()` возвращает словарь без None-значений,
+    готовый для распаковки: LGBMClassifier(**cfg.to_params())
+    """
+
+    n_estimators: int = 1_000
+    learning_rate: float = 0.05
+    max_depth: int = 4
+    num_leaves: int = 15
+    importance_type: str = 'gain'
+    min_child_samples: int = 20
+    subsample: float = 1.0
+    subsample_freq: int = 0
+    colsample_bytree: float = 1.0
+    reg_alpha: float = 0.0
+    reg_lambda: float = 0.0
+    n_jobs: int = -1
+    random_state: Optional[int] = None
+    class_weight: Optional[str] = None
+    objective: Optional[str] = None
+    boosting_type: str = "gbdt"
+    verbosity: int = -1
+
+    def to_params(self) -> dict:
+        return {
+            k: v
+            for k, v in self.model_dump().items()
+            if v is not None
+        }
+
+
+class AdversarialValidationConfig(BaseModel):
+    """
+    Настройки adversarial validation: периодический запуск проверки
+    на сравнение распределений (например, train vs recent data)
+    с помощью бинарного классификатора.
+    """
+
+    enabled: bool = False
+
+    # Периодичность запуска adversarial validation, в минутах
+    interval_minutes: Optional[int] = Field(default=None, gt=0)
+
+    max_samples: Optional[int] = Field(default=None, gt=0)
+    n_splits: Optional[int] = Field(default=None, ge=2)
+    random_state: Optional[int] = None
+    missing_category: Optional[str] = "__missing__"
+
+    lightgbm: LightGBMConfig = Field(default_factory=LightGBMConfig)
+
+    @model_validator(mode="after")
+    def check_required_when_enabled(self):
+        if not self.enabled:
+            return self
+
+        if self.interval_minutes is None:
+            raise ValueError(
+                "При adversarial_validation.enabled=True обязателен "
+                "interval_minutes (периодичность запуска в минутах)"
+            )
+
+        return self
+
+
 class Config(BaseModel):
     features: Dict[str, FeatureConfig]
     prediction_metrics: PredictionMetricsConfig
     stream_drift: Optional[StreamDriftConfig] = None
+    adversarial_validation: AdversarialValidationConfig = Field(
+        default_factory=AdversarialValidationConfig
+    )
 
     # Глобальные дефолтные thresholds по метрике.
     # Используются как fallback, если у конкретной фичи нет override.
