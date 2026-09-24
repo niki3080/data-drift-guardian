@@ -21,6 +21,9 @@
 - автоматически подбирать thresholds, если они не заданы вручную;
 - учитывать направление threshold'ов для обычных и reversed-метрик;
 - отдельно настраивать `prediction_metrics`;
+- добавлять блок `stream_drift`;
+- добавлять блок `adversarial_validation`;
+- настраивать параметры LightGBM для adversarial validation;
 - генерировать конфиг, совместимый со схемой `drift_guardian`.
 
 ---
@@ -96,8 +99,10 @@ config = build_drift_config(df)
 6. строит baseline profile через `Profiler`;
 7. автоматически подбирает thresholds;
 8. применяет дефолтные direction-aware ограничители для thresholds;
-9. возвращает `dict`;
-10. если передан `output_path`, сохраняет YAML.
+9. добавляет блок `prediction_metrics` с `enabled: false`;
+10. добавляет блок `adversarial_validation` с `enabled: false`, если используется дефолтное значение `emit_when_disabled=True`;
+11. возвращает `dict`;
+12. если передан `output_path`, сохраняет YAML.
 
 ---
 
@@ -201,6 +206,25 @@ thresholds:
   chi2:
     warning: 0.05
     critical: 0.01
+
+adversarial_validation:
+  enabled: false
+  missing_category: __missing__
+  lightgbm:
+    n_estimators: 1000
+    learning_rate: 0.05
+    max_depth: 4
+    num_leaves: 15
+    importance_type: gain
+    min_child_samples: 20
+    subsample: 1.0
+    subsample_freq: 0
+    colsample_bytree: 1.0
+    reg_alpha: 0.0
+    reg_lambda: 0.0
+    n_jobs: -1
+    boosting_type: gbdt
+    verbosity: -1
 ```
 
 Обратите внимание на `chi2`:
@@ -227,6 +251,30 @@ features:
       psi:
         warning: 0.05
         critical: 0.12
+```
+
+Блок `adversarial_validation` отвечает за настройки adversarial validation. По умолчанию он выключен:
+
+```yaml
+adversarial_validation:
+  enabled: false
+```
+
+Если блок не нужен в YAML вообще, можно отключить его генерацию:
+
+```python
+AdversarialValidationBuildOptions(
+    enabled=False,
+    emit_when_disabled=False,
+)
+```
+
+Если adversarial validation включён, поле `interval_minutes` обязательно:
+
+```yaml
+adversarial_validation:
+  enabled: true
+  interval_minutes: 60
 ```
 
 ---
@@ -888,16 +936,16 @@ AutoThresholdSettings(
 ```python
 {
     "missing_rate": {
-        "warning": 0.005,  # 0.5%
-        "critical": 0.02,  # 2%
+        "warning": 0.005,
+        "critical": 0.02,
     },
     "unseen_category_rate": {
-        "warning": 0.005,  # 0.5%
-        "critical": 0.02,  # 2%
+        "warning": 0.005,
+        "critical": 0.02,
     },
     "category_churn": {
-        "warning": 0.005,  # 0.5%
-        "critical": 0.02,  # 2%
+        "warning": 0.005,
+        "critical": 0.02,
     },
     "psi": {
         "warning": 0.1,
@@ -1456,6 +1504,419 @@ REVERSED_THRESHOLD_METRICS применяются только к метрика
 
 ---
 
+## adversarial_validation
+
+Генератор умеет добавлять в конфиг блок `adversarial_validation`.
+
+За это отвечает поле:
+
+```python
+ConfigBuildOptions(
+    adversarial_validation=AdversarialValidationBuildOptions(...)
+)
+```
+
+Для импорта используются два класса:
+
+```python
+from config.auto_config_builder import (
+    AdversarialValidationBuildOptions,
+    LightGBMBuildOptions,
+)
+```
+
+### Минимальный выключенный блок
+
+По умолчанию adversarial validation выключен:
+
+```python
+ConfigBuildOptions()
+```
+
+При дефолтном `emit_when_disabled=True` генератор добавит в YAML блок примерно такого вида:
+
+```yaml
+adversarial_validation:
+  enabled: false
+  missing_category: __missing__
+  lightgbm:
+    n_estimators: 1000
+    learning_rate: 0.05
+    max_depth: 4
+    num_leaves: 15
+    importance_type: gain
+    min_child_samples: 20
+    subsample: 1.0
+    subsample_freq: 0
+    colsample_bytree: 1.0
+    reg_alpha: 0.0
+    reg_lambda: 0.0
+    n_jobs: -1
+    boosting_type: gbdt
+    verbosity: -1
+```
+
+Если нужно полностью убрать блок из YAML:
+
+```python
+ConfigBuildOptions(
+    adversarial_validation=AdversarialValidationBuildOptions(
+        enabled=False,
+        emit_when_disabled=False,
+    )
+)
+```
+
+В этом случае поле `adversarial_validation` не будет записано в итоговый YAML.
+
+---
+
+### Включение adversarial validation
+
+Чтобы включить adversarial validation:
+
+```python
+ConfigBuildOptions(
+    adversarial_validation=AdversarialValidationBuildOptions(
+        enabled=True,
+        interval_minutes=60,
+    )
+)
+```
+
+В YAML:
+
+```yaml
+adversarial_validation:
+  enabled: true
+  interval_minutes: 60
+  missing_category: __missing__
+  lightgbm:
+    n_estimators: 1000
+    learning_rate: 0.05
+    max_depth: 4
+    num_leaves: 15
+    importance_type: gain
+    min_child_samples: 20
+    subsample: 1.0
+    subsample_freq: 0
+    colsample_bytree: 1.0
+    reg_alpha: 0.0
+    reg_lambda: 0.0
+    n_jobs: -1
+    boosting_type: gbdt
+    verbosity: -1
+```
+
+Важно:
+
+```text
+Если enabled=True, interval_minutes обязателен.
+```
+
+Некорректно:
+
+```python
+AdversarialValidationBuildOptions(
+    enabled=True,
+    interval_minutes=None,
+)
+```
+
+Такой конфиг завершится ошибкой генерации.
+
+---
+
+### Настройки AdversarialValidationBuildOptions
+
+```python
+AdversarialValidationBuildOptions(
+    enabled=False,
+    interval_minutes=None,
+    max_samples=None,
+    n_splits=None,
+    random_state=None,
+    missing_category="__missing__",
+    lightgbm=LightGBMBuildOptions(),
+    emit_when_disabled=True,
+)
+```
+
+Поля:
+
+| Поле | Тип | Значение по умолчанию | Описание |
+|---|---|---:|---|
+| `enabled` | `bool` | `False` | Включить или выключить adversarial validation |
+| `interval_minutes` | `int \| None` | `None` | Периодичность запуска AV в минутах. Обязательно при `enabled=True` |
+| `max_samples` | `int \| None` | `None` | Максимальное количество samples для AV. Если задано, должно быть `> 0` |
+| `n_splits` | `int \| None` | `None` | Количество folds/splits. Если задано, должно быть `>= 2` |
+| `random_state` | `int \| None` | `None` | Seed для воспроизводимости AV |
+| `missing_category` | `str \| None` | `"__missing__"` | Категория для заполнения missing values в categorical-признаках |
+| `lightgbm` | `LightGBMBuildOptions` | `LightGBMBuildOptions()` | Настройки LightGBM-модели для AV |
+| `emit_when_disabled` | `bool` | `True` | Служебная настройка генератора. Если `False` и `enabled=False`, блок не пишется в YAML |
+
+`emit_when_disabled` не попадает в итоговый YAML.
+
+---
+
+### Валидация adversarial_validation
+
+Генератор проверяет несколько условий до записи YAML:
+
+1. если `enabled=True`, то `interval_minutes` должен быть задан;
+2. если `interval_minutes` задан, он должен быть положительным;
+3. если `max_samples` задан, он должен быть положительным;
+4. если `n_splits` задан, он должен быть не меньше `2`.
+
+Корректно:
+
+```python
+AdversarialValidationBuildOptions(
+    enabled=True,
+    interval_minutes=60,
+    max_samples=50_000,
+    n_splits=5,
+)
+```
+
+Некорректно:
+
+```python
+AdversarialValidationBuildOptions(
+    enabled=True,
+    interval_minutes=None,
+)
+```
+
+Некорректно:
+
+```python
+AdversarialValidationBuildOptions(
+    enabled=True,
+    interval_minutes=0,
+)
+```
+
+Некорректно:
+
+```python
+AdversarialValidationBuildOptions(
+    enabled=True,
+    interval_minutes=60,
+    n_splits=1,
+)
+```
+
+---
+
+## Настройки LightGBM для adversarial_validation
+
+Параметры LightGBM задаются через:
+
+```python
+LightGBMBuildOptions
+```
+
+Пример:
+
+```python
+ConfigBuildOptions(
+    adversarial_validation=AdversarialValidationBuildOptions(
+        enabled=True,
+        interval_minutes=60,
+        max_samples=50_000,
+        n_splits=5,
+        random_state=42,
+        lightgbm=LightGBMBuildOptions(
+            n_estimators=300,
+            learning_rate=0.03,
+            max_depth=4,
+            num_leaves=15,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            reg_alpha=1.0,
+            reg_lambda=1.0,
+            random_state=42,
+        ),
+    )
+)
+```
+
+В YAML:
+
+```yaml
+adversarial_validation:
+  enabled: true
+  interval_minutes: 60
+  max_samples: 50000
+  n_splits: 5
+  random_state: 42
+  missing_category: __missing__
+  lightgbm:
+    n_estimators: 300
+    learning_rate: 0.03
+    max_depth: 4
+    num_leaves: 15
+    importance_type: gain
+    min_child_samples: 20
+    subsample: 0.8
+    subsample_freq: 0
+    colsample_bytree: 0.8
+    reg_alpha: 1.0
+    reg_lambda: 1.0
+    n_jobs: -1
+    random_state: 42
+    boosting_type: gbdt
+    verbosity: -1
+```
+
+---
+
+### Настройки LightGBMBuildOptions
+
+```python
+LightGBMBuildOptions(
+    n_estimators=1000,
+    learning_rate=0.05,
+    max_depth=4,
+    num_leaves=15,
+    importance_type="gain",
+    min_child_samples=20,
+    subsample=1.0,
+    subsample_freq=0,
+    colsample_bytree=1.0,
+    reg_alpha=0.0,
+    reg_lambda=0.0,
+    n_jobs=-1,
+    random_state=None,
+    class_weight=None,
+    objective=None,
+    boosting_type="gbdt",
+    verbosity=-1,
+)
+```
+
+Поля:
+
+| Поле | Тип | Значение по умолчанию |
+|---|---|---:|
+| `n_estimators` | `int` | `1000` |
+| `learning_rate` | `float` | `0.05` |
+| `max_depth` | `int` | `4` |
+| `num_leaves` | `int` | `15` |
+| `importance_type` | `str` | `"gain"` |
+| `min_child_samples` | `int` | `20` |
+| `subsample` | `float` | `1.0` |
+| `subsample_freq` | `int` | `0` |
+| `colsample_bytree` | `float` | `1.0` |
+| `reg_alpha` | `float` | `0.0` |
+| `reg_lambda` | `float` | `0.0` |
+| `n_jobs` | `int` | `-1` |
+| `random_state` | `int \| None` | `None` |
+| `class_weight` | `str \| None` | `None` |
+| `objective` | `str \| None` | `None` |
+| `boosting_type` | `str` | `"gbdt"` |
+| `verbosity` | `int` | `-1` |
+
+Поля со значением `None` не записываются в YAML.
+
+Например, при дефолтных настройках в YAML не попадут:
+
+```yaml
+random_state: null
+class_weight: null
+objective: null
+```
+
+Если эти параметры нужны, задайте их явно:
+
+```python
+LightGBMBuildOptions(
+    random_state=42,
+    class_weight="balanced",
+    objective="binary",
+)
+```
+
+---
+
+## Как adversarial_validation связан с thresholds
+
+`adversarial_validation` не использует блок `thresholds`.
+
+Thresholds из секций:
+
+```yaml
+thresholds:
+```
+
+и:
+
+```yaml
+features:
+  some_feature:
+    thresholds:
+```
+
+относятся к drift-метрикам: `psi`, `kstest`, `chi2`, `missing_rate` и другим.
+
+Настройки `adversarial_validation` отвечают за отдельную процедуру сравнения reference/current через модельный подход.
+
+Автоподбор thresholds через `AutoThresholdSettings` не подбирает параметры для adversarial validation.
+
+---
+
+## Как отключить adversarial_validation полностью
+
+Если AV временно не нужен, но хочется явно видеть это в YAML:
+
+```python
+ConfigBuildOptions(
+    adversarial_validation=AdversarialValidationBuildOptions(
+        enabled=False,
+        emit_when_disabled=True,
+    )
+)
+```
+
+YAML:
+
+```yaml
+adversarial_validation:
+  enabled: false
+  missing_category: __missing__
+  lightgbm:
+    n_estimators: 1000
+    learning_rate: 0.05
+    max_depth: 4
+    num_leaves: 15
+    importance_type: gain
+    min_child_samples: 20
+    subsample: 1.0
+    subsample_freq: 0
+    colsample_bytree: 1.0
+    reg_alpha: 0.0
+    reg_lambda: 0.0
+    n_jobs: -1
+    boosting_type: gbdt
+    verbosity: -1
+```
+
+Если AV не нужно писать в YAML вообще:
+
+```python
+ConfigBuildOptions(
+    adversarial_validation=AdversarialValidationBuildOptions(
+        enabled=False,
+        emit_when_disabled=False,
+    )
+)
+```
+
+Тогда блок `adversarial_validation` будет отсутствовать в итоговом конфиге.
+
+---
+
 ## Полный пример настройки
 
 ```python
@@ -1463,6 +1924,8 @@ from config.auto_config_builder import (
     build_drift_config,
     ConfigBuildOptions,
     AutoThresholdSettings,
+    AdversarialValidationBuildOptions,
+    LightGBMBuildOptions,
 )
 
 config = build_drift_config(
@@ -1572,6 +2035,26 @@ config = build_drift_config(
             "drift_event_time_lag_seconds": (30, 120),
             "drift_late_events_total": (10, 50),
         },
+
+        adversarial_validation=AdversarialValidationBuildOptions(
+            enabled=True,
+            interval_minutes=60,
+            max_samples=50_000,
+            n_splits=5,
+            random_state=42,
+            missing_category="__missing__",
+            lightgbm=LightGBMBuildOptions(
+                n_estimators=300,
+                learning_rate=0.03,
+                max_depth=4,
+                num_leaves=15,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                reg_alpha=1.0,
+                reg_lambda=1.0,
+                random_state=42,
+            ),
+        ),
 
         profiler_window_size=1000,
         merge_threshold=5,
@@ -1793,6 +2276,73 @@ config = build_drift_config(
 
 ---
 
+## Пример настройки adversarial_validation
+
+```python
+from config.auto_config_builder import (
+    build_drift_config,
+    ConfigBuildOptions,
+    AdversarialValidationBuildOptions,
+    LightGBMBuildOptions,
+)
+
+config = build_drift_config(
+    df,
+    options=ConfigBuildOptions(
+        adversarial_validation=AdversarialValidationBuildOptions(
+            enabled=True,
+            interval_minutes=60,
+            max_samples=50_000,
+            n_splits=5,
+            random_state=42,
+            missing_category="__missing__",
+            lightgbm=LightGBMBuildOptions(
+                n_estimators=300,
+                learning_rate=0.03,
+                max_depth=4,
+                num_leaves=15,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                reg_alpha=1.0,
+                reg_lambda=1.0,
+                random_state=42,
+            ),
+        ),
+    ),
+    output_path="config.yaml",
+)
+```
+
+В YAML получится примерно:
+
+```yaml
+adversarial_validation:
+  enabled: true
+  interval_minutes: 60
+  max_samples: 50000
+  n_splits: 5
+  random_state: 42
+  missing_category: __missing__
+  lightgbm:
+    n_estimators: 300
+    learning_rate: 0.03
+    max_depth: 4
+    num_leaves: 15
+    importance_type: gain
+    min_child_samples: 20
+    subsample: 0.8
+    subsample_freq: 0
+    colsample_bytree: 0.8
+    reg_alpha: 1.0
+    reg_lambda: 1.0
+    n_jobs: -1
+    random_state: 42
+    boosting_type: gbdt
+    verbosity: -1
+```
+
+---
+
 ## Пример настройки chi2
 
 `chi2` используется только для categorical-фичей и возвращает p_value.
@@ -2007,6 +2557,84 @@ config = build_drift_config(
 
 ---
 
+### Сценарий 9. Хочу включить adversarial validation
+
+```python
+from config.auto_config_builder import (
+    build_drift_config,
+    ConfigBuildOptions,
+    AdversarialValidationBuildOptions,
+    LightGBMBuildOptions,
+)
+
+config = build_drift_config(
+    df,
+    options=ConfigBuildOptions(
+        adversarial_validation=AdversarialValidationBuildOptions(
+            enabled=True,
+            interval_minutes=60,
+            max_samples=50_000,
+            n_splits=5,
+            random_state=42,
+            lightgbm=LightGBMBuildOptions(
+                n_estimators=300,
+                learning_rate=0.03,
+                random_state=42,
+            ),
+        ),
+    ),
+    output_path="config.yaml",
+)
+```
+
+---
+
+### Сценарий 10. Хочу явно выключить adversarial validation, но оставить блок в YAML
+
+```python
+from config.auto_config_builder import (
+    build_drift_config,
+    ConfigBuildOptions,
+    AdversarialValidationBuildOptions,
+)
+
+config = build_drift_config(
+    df,
+    options=ConfigBuildOptions(
+        adversarial_validation=AdversarialValidationBuildOptions(
+            enabled=False,
+            emit_when_disabled=True,
+        ),
+    ),
+    output_path="config.yaml",
+)
+```
+
+---
+
+### Сценарий 11. Хочу полностью убрать adversarial_validation из YAML
+
+```python
+from config.auto_config_builder import (
+    build_drift_config,
+    ConfigBuildOptions,
+    AdversarialValidationBuildOptions,
+)
+
+config = build_drift_config(
+    df,
+    options=ConfigBuildOptions(
+        adversarial_validation=AdversarialValidationBuildOptions(
+            enabled=False,
+            emit_when_disabled=False,
+        ),
+    ),
+    output_path="config.yaml",
+)
+```
+
+---
+
 ## Рекомендации
 
 1. Начинайте с автоматической генерации:
@@ -2021,7 +2649,8 @@ config = build_drift_config(df, output_path="config.yaml")
 - типы фичей;
 - expensive metrics;
 - thresholds для business-critical фичей;
-- thresholds для `chi2`.
+- thresholds для `chi2`;
+- блок `adversarial_validation`, если он включён.
 
 3. Для PSI обычно оставляйте стандартные thresholds:
 
@@ -2063,6 +2692,39 @@ ConfigBuildOptions(
 )
 ```
 
+8. Если нужен model-based drift check между reference/current, включите `adversarial_validation`:
+
+```python
+AdversarialValidationBuildOptions(
+    enabled=True,
+    interval_minutes=60,
+    max_samples=50_000,
+    n_splits=5,
+    random_state=42,
+)
+```
+
+9. Если `adversarial_validation.enabled=True`, всегда задавайте `interval_minutes`.
+
+10. Для больших датасетов задавайте `max_samples`, чтобы adversarial validation не был слишком дорогим:
+
+```python
+AdversarialValidationBuildOptions(
+    enabled=True,
+    interval_minutes=60,
+    max_samples=50_000,
+)
+```
+
+11. Если блок `adversarial_validation` не нужен в YAML, используйте:
+
+```python
+AdversarialValidationBuildOptions(
+    enabled=False,
+    emit_when_disabled=False,
+)
+```
+
 ---
 
 ## Краткая памятка по основным thresholds
@@ -2080,3 +2742,48 @@ ConfigBuildOptions(
 | `cardinality_ratio` | больше хуже | `warning=0.02`, `critical=0.05` |
 
 ---
+
+## Краткая памятка по adversarial_validation
+
+| Настройка | Когда использовать |
+|---|---|
+| `enabled=False` | AV выключен |
+| `enabled=True` | AV включён |
+| `interval_minutes=60` | Запускать AV раз в 60 минут |
+| `max_samples=50_000` | Ограничить размер данных для AV |
+| `n_splits=5` | Использовать 5 splits/folds |
+| `random_state=42` | Сделать результат воспроизводимым |
+| `missing_category="__missing__"` | Явная категория для missing values |
+| `emit_when_disabled=True` | Писать выключенный AV-блок в YAML |
+| `emit_when_disabled=False` | Не писать AV-блок в YAML, если он выключен |
+
+Минимально для включения:
+
+```python
+AdversarialValidationBuildOptions(
+    enabled=True,
+    interval_minutes=60,
+)
+```
+
+Рекомендуемый практический вариант:
+
+```python
+AdversarialValidationBuildOptions(
+    enabled=True,
+    interval_minutes=60,
+    max_samples=50_000,
+    n_splits=5,
+    random_state=42,
+    lightgbm=LightGBMBuildOptions(
+        n_estimators=300,
+        learning_rate=0.03,
+        max_depth=4,
+        num_leaves=15,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        reg_alpha=1.0,
+        reg_lambda=1.0,
+        random_state=42,
+    ),
+)
