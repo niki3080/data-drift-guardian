@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
 
-from src.drift_guardian.profiler.baseline_profiler import Profiler
+from drift_guardian.profiler.baseline_profiler import Profiler
 
 
 WINDOW_SIZE_NO_SAMPLE_WARNING = "If take_sample=False, window_size does nothing"

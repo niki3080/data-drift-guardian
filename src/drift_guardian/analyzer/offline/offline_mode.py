@@ -1,9 +1,9 @@
-from config.auto_config_builder import build_drift_config, ConfigBuildOptions
-from config.parse_config import read_config, config_from_dict
-from src.drift_guardian.profiler.baseline_profiler import Profiler
-from src.drift_guardian.data_quality_checker.checker import SchemaChecker
-from src.drift_guardian.analyzer.engine.engine import DriftMetricsEngine
-from src.drift_guardian.analyzer.utils import extract_feature_groups
+from drift_guardian.config_handler.auto_config_builder import build_drift_config, ConfigBuildOptions
+from drift_guardian.config_handler.parse_config import read_config, config_from_dict
+from drift_guardian.profiler.baseline_profiler import Profiler
+from drift_guardian.data_quality_checker.checker import SchemaChecker
+from drift_guardian.analyzer.engine.engine import DriftMetricsEngine
+from drift_guardian.analyzer.utils import extract_feature_groups
 
 import logging
 import warnings

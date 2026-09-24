@@ -7,8 +7,8 @@ import pandas as pd
 import pytest
 import yaml
 
-import config.auto_config_builder as acb
-from config.parse_config import config_from_dict
+import drift_guardian.config_handler.auto_config_builder as acb
+from drift_guardian.config_handler.parse_config import config_from_dict
 
 
 @pytest.fixture(autouse=True)

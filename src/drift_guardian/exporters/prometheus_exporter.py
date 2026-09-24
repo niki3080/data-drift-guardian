@@ -15,7 +15,7 @@ from prometheus_client import (
     start_http_server,
 )
 
-from src.drift_guardian.ingestion.stream_metrics import StreamSnapshot
+from drift_guardian.ingestion.stream_metrics import StreamSnapshot
 
 STATUS_TO_NUMBER = {
     "insufficient_data": -1,

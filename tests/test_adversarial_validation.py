@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.drift_guardian.analyzer.methods.batch.adversarial_validation import (
+from drift_guardian.analyzer.methods.batch.adversarial_validation import (
     _prepare_features,
     _validate_inputs,
     adversarial_validation,
@@ -12,7 +12,7 @@ from src.drift_guardian.analyzer.methods.batch.adversarial_validation import (
 
 
 ADVERSARIAL_VALIDATION_MODULE = (
-    "src.drift_guardian.analyzer.methods.batch.adversarial_validation"
+    "drift_guardian.analyzer.methods.batch.adversarial_validation"
 )
 
 

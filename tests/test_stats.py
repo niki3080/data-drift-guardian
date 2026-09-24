@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.drift_guardian.analyzer.methods.low_level.stats import (
+from drift_guardian.analyzer.methods.low_level.stats import (
     psi,
     js_divergence,
     ks_d_statistic,

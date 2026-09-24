@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from config.parse_config import FeatureType
+from drift_guardian.config_handler.parse_config import FeatureType
 
-from src.drift_guardian.analyzer.utils import (
+from drift_guardian.analyzer.utils import (
     make_counts,
     find_ref,
     extract_feature_groups,

@@ -16,9 +16,9 @@ from pandas.api.types import (
     is_timedelta64_dtype,
 )
 
-from src.drift_guardian.analyzer.regestry.metric_registry import METRIC_REGISTRY
-from config.parse_config import REVERSED_THRESHOLD_METRICS
-from src.drift_guardian.profiler.baseline_profiler import Profiler
+from drift_guardian.analyzer.regestry.metric_registry import METRIC_REGISTRY
+from drift_guardian.config_handler.parse_config import REVERSED_THRESHOLD_METRICS
+from drift_guardian.profiler.baseline_profiler import Profiler
 
 
 if not METRIC_REGISTRY:

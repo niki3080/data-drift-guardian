@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.drift_guardian.analyzer.regestry import metric_registry
+from drift_guardian.analyzer.regestry import metric_registry
 
 
 def dummy_reference_dict():

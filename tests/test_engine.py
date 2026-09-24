@@ -5,8 +5,8 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-import src.drift_guardian.analyzer.engine.engine as engine_module
-from src.drift_guardian.analyzer.engine.engine import DriftMetricsEngine
+import drift_guardian.analyzer.engine.engine as engine_module
+from drift_guardian.analyzer.engine.engine import DriftMetricsEngine
 
 
 @dataclass(frozen=True)

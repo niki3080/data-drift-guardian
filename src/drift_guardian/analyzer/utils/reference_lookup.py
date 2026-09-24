@@ -1,4 +1,4 @@
-from src.drift_guardian.schema.models import CategoricalRef, NumericRef, ReferenceDict
+from drift_guardian.schema.models import CategoricalRef, NumericRef, ReferenceDict
 
 def find_ref(reference_dict: ReferenceDict, feature: str) -> CategoricalRef | NumericRef:
     if feature in reference_dict['num_ref']:

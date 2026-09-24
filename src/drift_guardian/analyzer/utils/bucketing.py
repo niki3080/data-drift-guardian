@@ -1,4 +1,4 @@
-from src.drift_guardian.schema.models import CategoricalRef, NumericRef
+from drift_guardian.schema.models import CategoricalRef, NumericRef
 
 import numpy as np
 import pandas as pd

@@ -1,4 +1,4 @@
-from src.drift_guardian.schema.models import ReferenceDict
+from drift_guardian.schema.models import ReferenceDict
 
 import logging
 import warnings

@@ -1,8 +1,8 @@
-from src.drift_guardian.analyzer.regestry.metric_registry import METRIC_REGISTRY
-from src.drift_guardian.analyzer.methods.batch.adversarial_validation import adversarial_validation
-from src.drift_guardian.schema.models import ReferenceDict, MetricFn
-from config.parse_config import Metric
-from src.drift_guardian.analyzer.utils import find_ref
+from drift_guardian.analyzer.regestry.metric_registry import METRIC_REGISTRY
+from drift_guardian.analyzer.methods.batch.adversarial_validation import adversarial_validation
+from drift_guardian.schema.models import ReferenceDict, MetricFn
+from drift_guardian.config_handler.parse_config import Metric
+from drift_guardian.analyzer.utils import find_ref
 
 import logging
 from typing import Any

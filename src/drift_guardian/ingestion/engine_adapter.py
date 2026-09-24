@@ -11,10 +11,10 @@ from typing import Any
 import pandas as pd
 import yaml
 
-from src.drift_guardian.analyzer.methods.batch import adversarial_validation
-from src.drift_guardian.data_quality_checker.checker import SchemaChecker
-from src.drift_guardian.analyzer.engine.engine import DriftMetricsEngine
-from src.drift_guardian.ingestion.demo_reference import write_demo_reference
+from drift_guardian.analyzer.methods.batch import adversarial_validation
+from drift_guardian.data_quality_checker.checker import SchemaChecker
+from drift_guardian.analyzer.engine.engine import DriftMetricsEngine
+from drift_guardian.ingestion.demo_reference import write_demo_reference
 
 CoreAnalyzer = Callable[[pd.DataFrame, pd.DataFrame], dict[str, Any]]
 AdversarialAnalyzer = Callable[..., tuple[float, pd.DataFrame]]

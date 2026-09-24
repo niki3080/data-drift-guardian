@@ -1,4 +1,4 @@
-from config.parse_config import Config, FeatureType
+from drift_guardian.config_handler.parse_config import Config, FeatureType
 
 from typing import Optional, List, Tuple
 

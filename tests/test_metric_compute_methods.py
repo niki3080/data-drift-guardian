@@ -2,16 +2,16 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.drift_guardian.analyzer.methods import cardinality_ratio
-from src.drift_guardian.analyzer.methods import js_divergence
-from src.drift_guardian.analyzer.methods import chi2
-from src.drift_guardian.analyzer.methods import psi
-from src.drift_guardian.analyzer.methods import missing_rate
-from src.drift_guardian.analyzer.methods import cramer_v
-from src.drift_guardian.analyzer.methods import ks_d_statistic
-from src.drift_guardian.analyzer.methods import wn_distance
-from src.drift_guardian.analyzer.methods import unseen_category_rate
-from src.drift_guardian.analyzer.methods import category_churn
+from drift_guardian.analyzer.methods import cardinality_ratio
+from drift_guardian.analyzer.methods import js_divergence
+from drift_guardian.analyzer.methods import chi2
+from drift_guardian.analyzer.methods import psi
+from drift_guardian.analyzer.methods import missing_rate
+from drift_guardian.analyzer.methods import cramer_v
+from drift_guardian.analyzer.methods import ks_d_statistic
+from drift_guardian.analyzer.methods import wn_distance
+from drift_guardian.analyzer.methods import unseen_category_rate
+from drift_guardian.analyzer.methods import category_churn
 
 
 # ---------------------------------------------------------------------

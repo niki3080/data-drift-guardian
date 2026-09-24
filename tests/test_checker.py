@@ -3,7 +3,7 @@ from datetime import datetime
 import pandas as pd
 import pytest
 
-from src.drift_guardian.data_quality_checker.checker import SchemaChecker
+from drift_guardian.data_quality_checker.checker import SchemaChecker
 
 
 @pytest.fixture

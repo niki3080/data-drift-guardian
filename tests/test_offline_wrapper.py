@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
 
-MODULE_PATH = "src.drift_guardian.analyzer.offline.offline_mode"
+MODULE_PATH = "drift_guardian.analyzer.offline.offline_mode"
 offline_mode = importlib.import_module(MODULE_PATH)
 OfflineWrapper = offline_mode.OfflineWrapper
 

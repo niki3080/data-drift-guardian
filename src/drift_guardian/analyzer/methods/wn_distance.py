@@ -1,6 +1,6 @@
-from config.parse_config import Metric
-from src.drift_guardian.analyzer.regestry.metric_registry import register
-from src.drift_guardian.schema.models import ReferenceDict
+from drift_guardian.config_handler.parse_config import Metric
+from drift_guardian.analyzer.regestry.metric_registry import register
+from drift_guardian.schema.models import ReferenceDict
 
 from scipy.stats import wasserstein_distance
 

@@ -1,7 +1,7 @@
 import logging
 
-from config.parse_config import Metric
-from src.drift_guardian.schema.models import MetricFn
+from drift_guardian.config_handler.parse_config import Metric
+from drift_guardian.schema.models import MetricFn
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ def register(metric: Metric):
     return wrapper
 
 
-from src.drift_guardian.analyzer.methods import (category_churn,
+from drift_guardian.analyzer.methods import (category_churn,
                                                  chi2,
                                                  cramer_v,
                                                  js_divergence,
