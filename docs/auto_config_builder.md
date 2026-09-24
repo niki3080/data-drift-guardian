@@ -1633,9 +1633,9 @@ AdversarialValidationBuildOptions(
 AdversarialValidationBuildOptions(
     enabled=False,
     interval_minutes=None,
-    max_samples=None,
-    n_splits=None,
-    random_state=None,
+    max_samples=100_000,
+    n_splits=3,
+    random_state=42,
     missing_category="__missing__",
     lightgbm=LightGBMBuildOptions(),
     emit_when_disabled=True,
@@ -1644,16 +1644,16 @@ AdversarialValidationBuildOptions(
 
 Поля:
 
-| Поле | Тип | Значение по умолчанию | Описание |
-|---|---|---:|---|
-| `enabled` | `bool` | `False` | Включить или выключить adversarial validation |
-| `interval_minutes` | `int \| None` | `None` | Периодичность запуска AV в минутах. Обязательно при `enabled=True` |
-| `max_samples` | `int \| None` | `None` | Максимальное количество samples для AV. Если задано, должно быть `> 0` |
-| `n_splits` | `int \| None` | `None` | Количество folds/splits. Если задано, должно быть `>= 2` |
-| `random_state` | `int \| None` | `None` | Seed для воспроизводимости AV |
-| `missing_category` | `str \| None` | `"__missing__"` | Категория для заполнения missing values в categorical-признаках |
-| `lightgbm` | `LightGBMBuildOptions` | `LightGBMBuildOptions()` | Настройки LightGBM-модели для AV |
-| `emit_when_disabled` | `bool` | `True` | Служебная настройка генератора. Если `False` и `enabled=False`, блок не пишется в YAML |
+| Поле | Тип |    Значение по умолчанию | Описание                                                                                     |
+|---|---|-------------------------:|----------------------------------------------------------------------------------------------|
+| `enabled` | `bool` |                  `False` | Включить или выключить adversarial validation                                                |
+| `interval_minutes` | `int \| None` |                   `None` | Периодичность запуска AV в минутах. Обязательно при `enabled=True`                           |
+| `max_samples` | `int` |                  100 000 | Максимальное количество samples для AV. Если задано, должно быть `> 0` |
+| `n_splits` | `int` |                        3 | Количество folds/splits. Если задано, должно быть `>= 2`                                     |
+| `random_state` | `int \| None` |                        42 | Seed для воспроизводимости AV                                                                |
+| `missing_category` | `str` |          `"__missing__"` | Категория для заполнения missing values в categorical-признаках                              |
+| `lightgbm` | `LightGBMBuildOptions` | `LightGBMBuildOptions()` | Настройки LightGBM-модели для AV                                                             |
+| `emit_when_disabled` | `bool` |                   `True` | Служебная настройка генератора. Если `False` и `enabled=False`, блок не пишется в YAML       |
 
 `emit_when_disabled` не попадает в итоговый YAML.
 
