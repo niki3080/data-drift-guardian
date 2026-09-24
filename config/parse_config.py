@@ -260,9 +260,9 @@ class AdversarialValidationConfig(BaseModel):
     # Периодичность запуска adversarial validation, в минутах
     interval_minutes: Optional[int] = Field(default=None, gt=0)
 
-    max_samples: Optional[int] = Field(default=None, gt=0)
-    n_splits: Optional[int] = Field(default=None, ge=2)
-    random_state: Optional[int] = None
+    max_samples: Optional[int] = Field(default=100_000, gt=0)
+    n_splits: Optional[int] = Field(default=3, ge=2)
+    random_state: Optional[int] = 42
     missing_category: Optional[str] = "__missing__"
 
     lightgbm: LightGBMConfig = Field(default_factory=LightGBMConfig)
