@@ -1,0 +1,30 @@
+# Конфигурация симуляции дрифта фичей.
+# start_step  — номер сообщения, с которого дрифт начинает применяться
+# ramp_steps  — за сколько шагов дрифт нарастает от 0 до полной magnitude
+#               (ramp_steps: 1 значит "мгновенно", резкий скачок)
+
+features:
+  feature_1:
+    type: shift
+    magnitude: 2.5
+    start_step: 500
+    ramp_steps: 200
+
+  feature_2:
+    type: scale
+    magnitude: 0.8
+    start_step: 500
+    ramp_steps: 200
+
+  feature_3:
+    type: noise
+    magnitude: 1.2
+    start_step: 300
+    ramp_steps: 50
+
+  category_feature:
+    type: categorical_swap
+    probability: 0.6
+    target_category: rare_value
+    start_step: 800
+    ramp_steps: 1
