@@ -81,6 +81,7 @@ def install_offline_wrapper_fakes(
             prediction=None,
             merge_threshold=5,
             take_sample=True,
+            window_size=1000,
             low_cardinality_threshold=15,
         ):
             self.reference_df = reference_df
@@ -90,6 +91,7 @@ def install_offline_wrapper_fakes(
             self.merge_threshold = merge_threshold
             self.take_sample = take_sample
             self.low_cardinality_threshold = low_cardinality_threshold
+            self.window_size = window_size
             state.profiler_instances.append(self)
 
         def profile_ref_data(self):
