@@ -342,7 +342,7 @@ def test_lightgbm_params_are_merged_and_invariants_are_preserved(
         assert model.params["objective"] == "binary"
         assert model.params["metric"] == "auc"
         assert "eval_metric" not in model.fit_kwargs
-        assert "eval_X" not in model.fit_kwargs
-        assert "eval_y" not in model.fit_kwargs
-        assert "eval_set" in model.fit_kwargs
+        assert "eval_X" in model.fit_kwargs
+        assert "eval_y" in model.fit_kwargs
+        assert "eval_set" not in model.fit_kwargs
         assert model.fit_kwargs["callbacks"] == ["callback"]
