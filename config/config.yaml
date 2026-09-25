@@ -55,7 +55,7 @@ stream_drift:
   # остальные поля не заданы — значит не мониторятся
 
 adversarial_validation:
-  enabled: false
+  enabled: True
   interval_minutes: 30
   # все остальное - опционально
   max_samples: 50000
