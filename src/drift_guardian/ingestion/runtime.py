@@ -127,6 +127,7 @@ def _monitoring_av_thresholds_from_env() -> AvThresholds:
 
 def build_runtime(
     reference_df: pd.DataFrame,
+    window_size: int,
     *,
     config_path: str | Path,
     dataset_name: str = "reference",
@@ -147,7 +148,8 @@ def build_runtime(
     core = OfflineWrapper(
         reference_df=reference_df,
         path_to_config=str(config_path),
-        take_sample=True
+        take_sample=True,
+        window_size=window_size
     )
 
     return RuntimeContext(
@@ -181,6 +183,7 @@ def build_runtime_from_env(window_size: int) -> RuntimeContext:
 
     return build_runtime(
         reference_df,
+        window_size,
         config_path=config_path,
         dataset_name=reference_path.stem,
         adversarial_thresholds=_monitoring_av_thresholds_from_env(),

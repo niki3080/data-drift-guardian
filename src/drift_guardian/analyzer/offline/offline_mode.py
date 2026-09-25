@@ -22,7 +22,8 @@ class OfflineWrapper:
                  save_config_path: str | None = None,
                  merge_threshold: int = 5,
                  low_cardinality_threshold: int = 15,
-                 take_sample: bool = False
+                 take_sample: bool = False,
+                 window_size: int | None = None
                  ):
         logger.debug(
             "Initializing OfflineWrapper: reference_df.shape=%s, "
@@ -76,7 +77,8 @@ class OfflineWrapper:
                             prediction=prediction,
                             merge_threshold=merge_threshold,
                             low_cardinality_threshold=low_cardinality_threshold,
-                            take_sample=take_sample)
+                            take_sample=take_sample,
+                            window_size=window_size)
 
         required_features = set(num_feats or []) | set(cat_feats or []) | {prediction}
         required_features.discard(None)
