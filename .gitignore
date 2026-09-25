@@ -1,5 +1,40 @@
 # Локальные исходные датасеты
 data/train_transaction.csv
 
-# Служебные файлы macOS
+# Байт-код и кэш Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Виртуальные окружения
+myenv/
+venv/
+.venv/
+env/
+
+# Jupyter
+*.ipynb/
+
+# Логи и отладка
+*.log
+.cache/
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Сборка пакетов
+build/
+dist/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+
+# Служебные файлы macOS / Windows
 .DS_Store
+Thumbs.db
+
+# Переменные окружения / секреты
+.env
+.env.*
