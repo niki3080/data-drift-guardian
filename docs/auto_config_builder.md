@@ -45,7 +45,7 @@ from src.drift_guardian.profiler.baseline_profiler import Profiler
 Также генератор использует список reversed-метрик из парсера конфига:
 
 ```python
-from config.parse_config import REVERSED_THRESHOLD_METRICS
+from src.drift_guardian.config_handler.parse_config import REVERSED_THRESHOLD_METRICS
 ```
 
 Все функции расчёта метрик берутся из `METRIC_REGISTRY`.
@@ -73,7 +73,7 @@ Metric.chi2 — это p_value.
 Минимальный вызов:
 
 ```python
-from config.auto_config_builder import build_drift_config
+from src.drift_guardian.config_handler.auto_config_builder import build_drift_config
 
 config = build_drift_config(
     df,
@@ -84,7 +84,7 @@ config = build_drift_config(
 Если файл сохранять не нужно:
 
 ```python
-from config.auto_config_builder import build_drift_config
+from src.drift_guardian.config_handler.auto_config_builder import build_drift_config
 
 config = build_drift_config(df)
 ```
@@ -111,7 +111,7 @@ config = build_drift_config(df)
 На практике лучше сразу явно исключить технические колонки и указать размер окна:
 
 ```python
-from config.auto_config_builder import (
+from src.drift_guardian.config_handler.auto_config_builder import (
     build_drift_config,
     ConfigBuildOptions,
     AutoThresholdSettings,
@@ -1519,7 +1519,7 @@ ConfigBuildOptions(
 Для импорта используются два класса:
 
 ```python
-from config.auto_config_builder import (
+from src.drift_guardian.config_handler.auto_config_builder import (
     AdversarialValidationBuildOptions,
     LightGBMBuildOptions,
 )
@@ -1920,7 +1920,7 @@ ConfigBuildOptions(
 ## Полный пример настройки
 
 ```python
-from config.auto_config_builder import (
+from src.drift_guardian.config_handler.auto_config_builder import (
     build_drift_config,
     ConfigBuildOptions,
     AutoThresholdSettings,
@@ -2102,7 +2102,7 @@ config = build_drift_config(
 ## Пример с максимально простым конфигом
 
 ```python
-from config.auto_config_builder import build_drift_config
+from src.drift_guardian.config_handler.auto_config_builder import build_drift_config
 
 config = build_drift_config(
     df,
@@ -2117,7 +2117,7 @@ config = build_drift_config(
 ## Пример только с ручными thresholds
 
 ```python
-from config.auto_config_builder import (
+from src.drift_guardian.config_handler.auto_config_builder import (
     build_drift_config,
     ConfigBuildOptions,
     AutoThresholdSettings,
@@ -2172,7 +2172,7 @@ config = build_drift_config(
 ## Пример с feature-level auto thresholds
 
 ```python
-from config.auto_config_builder import (
+from src.drift_guardian.config_handler.auto_config_builder import (
     build_drift_config,
     ConfigBuildOptions,
     AutoThresholdSettings,
@@ -2279,7 +2279,7 @@ config = build_drift_config(
 ## Пример настройки adversarial_validation
 
 ```python
-from config.auto_config_builder import (
+from src.drift_guardian.config_handler.auto_config_builder import (
     build_drift_config,
     ConfigBuildOptions,
     AdversarialValidationBuildOptions,
@@ -2399,7 +2399,7 @@ thresholds:
 Рекомендуется после генерации дополнительно прогнать конфиг через pydantic-схему или стандартный загрузчик конфига.
 
 ```python
-from config.parse_config import read_config
+from src.drift_guardian.config_handler.parse_config import read_config
 
 validated_config = read_config("config.yaml")
 ```
@@ -2560,7 +2560,7 @@ config = build_drift_config(
 ### Сценарий 9. Хочу включить adversarial validation
 
 ```python
-from config.auto_config_builder import (
+from src.drift_guardian.config_handler.auto_config_builder import (
     build_drift_config,
     ConfigBuildOptions,
     AdversarialValidationBuildOptions,
@@ -2592,7 +2592,7 @@ config = build_drift_config(
 ### Сценарий 10. Хочу явно выключить adversarial validation, но оставить блок в YAML
 
 ```python
-from config.auto_config_builder import (
+from src.drift_guardian.config_handler.auto_config_builder import (
     build_drift_config,
     ConfigBuildOptions,
     AdversarialValidationBuildOptions,
@@ -2615,7 +2615,7 @@ config = build_drift_config(
 ### Сценарий 11. Хочу полностью убрать adversarial_validation из YAML
 
 ```python
-from config.auto_config_builder import (
+from src.drift_guardian.config_handler.auto_config_builder import (
     build_drift_config,
     ConfigBuildOptions,
     AdversarialValidationBuildOptions,
