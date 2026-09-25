@@ -22,16 +22,18 @@ def _dashboard() -> dict:
     return json.loads(DASHBOARD_PATH.read_text(encoding="utf-8"))
 
 
-def test_kafka_prometheus_and_grafana_are_shared_services() -> None:
-    """Проверяет, что базовая инфраструктура не принадлежит profile режима."""
+def test_prometheus_and_grafana_are_shared_services() -> None:
+    """Проверяет, что базовая инфраструктура мониторинга не принадлежит profile режима."""
     services = yaml.safe_load(COMPOSE_PATH.read_text(encoding="utf-8"))["services"]
 
-    for service_name in ("kafka", "prometheus", "grafana"):
+    for service_name in ("prometheus", "grafana"):
         assert "profiles" not in services[service_name]
 
     assert services["drift-mock-exporter"]["profiles"] == ["mock"]
-    for service_name in ("kafka-init", "analyzer", "drift-producer"):
-        assert services[service_name]["profiles"] == ["realtime"]
+    assert services["analyzer"]["profiles"] == ["realtime"]
+    for service_name in ("kafka", "drift-producer"):
+        assert services[service_name]["profiles"] == ["local-kafka"]
+
 
 
 def test_prometheus_separates_mock_and_realtime_without_custom_mode_label() -> None:
