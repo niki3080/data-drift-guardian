@@ -39,7 +39,7 @@ def write_demo_reference(path: str | Path, rows: int = 10_000, seed: int = 42) -
 def main() -> None:
     """CLI для генерации demo reference dataset."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", default="data/demo_reference.csv")
+    parser.add_argument("--output", default="data/reference.csv")
     parser.add_argument("--rows", type=int, default=10_000)
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
