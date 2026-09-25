@@ -169,15 +169,42 @@ feature_status = Gauge(
     ["feature", "type"],
 )
 
+overall_status_streak = Gauge(
+    "drift_overall_status_streak",
+    "Consecutive analysis windows with the same overall warning/critical status",
+    ["status"],
+)
+feature_status_streak = Gauge(
+    "drift_status_feature_streak",
+    "Consecutive analysis windows with the same feature warning/critical status",
+    ["feature", "type", "status"],
+)
+metric_status_streak = Gauge(
+    "drift_status_streak",
+    "Consecutive analysis windows with the same metric warning/critical status",
+    ["feature", "type", "metric", "status"],
+)
+
 metric_threshold = Gauge(
     "drift_threshold",
     "Configured warning and critical thresholds for drift metrics",
     ["metric", "level"],
 )
 
+resolved_threshold = Gauge(
+    "drift_resolved_threshold",
+    "Resolved warning and critical thresholds for a feature metric",
+    ["feature", "type", "metric", "level"],
+)
+
 av_status = Gauge(
     "drift_av_status",
     "Adversarial validation status: -1=not configured, 0=ok, 1=warning, 2=critical",
+)
+av_status_streak = Gauge(
+    "drift_av_status_streak",
+    "Consecutive analysis windows with the same AV warning/critical status",
+    ["status"],
 )
 av_available = Gauge(
     "drift_av_available",
@@ -267,6 +294,31 @@ SEVERITY_TO_CODE = {
     "critical": 2,
 }
 
+OVERALL_STREAK_STATE: tuple[int, int] = (-1, 0)
+FEATURE_STREAK_STATE: dict[tuple[str, str], tuple[int, int]] = {}
+METRIC_STREAK_STATE: dict[tuple[str, str, str], tuple[int, int]] = {}
+AV_STREAK_STATE: tuple[int, int] = (-1, 0)
+
+
+def _next_streak(previous: tuple[int, int] | None, status: int) -> tuple[int, int]:
+    """Обновляет длину последовательности одинаковых warning/critical status."""
+    if status not in (1, 2):
+        return status, 0
+    if previous is not None and previous[0] == status:
+        return status, previous[1] + 1
+    return status, 1
+
+
+def _set_streak(
+    gauge: Gauge,
+    labels: dict[str, str],
+    state: tuple[int, int],
+) -> None:
+    """Публикует mock streak в warning/critical label-серии."""
+    status, count = state
+    for number, name in ((1, "warning"), (2, "critical")):
+        gauge.labels(**labels, status=name).set(count if status == number else 0)
+
 
 def export_to_prometheus(report: dict[str, Any]) -> None:
     """Преобразует один drift_report в набор Prometheus-метрик."""
@@ -276,12 +328,20 @@ def export_to_prometheus(report: dict[str, Any]) -> None:
     )
     report_timestamp_seconds.set(timestamp.timestamp())
     window_size.set(report["window_size"])
-    overall_status.set(SEVERITY_TO_CODE[report["overall_status"]])
+    global OVERALL_STREAK_STATE
+
+    overall_code = SEVERITY_TO_CODE[report["overall_status"]]
+    overall_status.set(overall_code)
     active_alerts.set(report["active_alerts"])
+    OVERALL_STREAK_STATE = _next_streak(OVERALL_STREAK_STATE, overall_code)
+    _set_streak(overall_status_streak, {}, OVERALL_STREAK_STATE)
 
     metric_value.clear()
     metric_status.clear()
+    resolved_threshold.clear()
     feature_status.clear()
+    feature_status_streak.clear()
+    metric_status_streak.clear()
     metric_threshold.clear()
 
     for metric_name, levels in report["thresholds"].items():
@@ -303,24 +363,39 @@ def _export_feature(
     feature_name: str,
     feature_data: dict[str, Any],
 ) -> None:
+    """Экспортирует один feature block mock drift-report."""
     feature_type = feature_data["type"]
     feature_labels = {"feature": feature_name, "type": feature_type}
-    feature_status.labels(**feature_labels).set(
-        SEVERITY_TO_CODE[feature_data["status"]]
-    )
+    feature_code = SEVERITY_TO_CODE[feature_data["status"]]
+    feature_status.labels(**feature_labels).set(feature_code)
+    feature_key = (feature_name, feature_type)
+    feature_state = _next_streak(FEATURE_STREAK_STATE.get(feature_key), feature_code)
+    FEATURE_STREAK_STATE[feature_key] = feature_state
+    _set_streak(feature_status_streak, feature_labels, feature_state)
 
     for metric_name, result in feature_data["metrics"].items():
         labels = {**feature_labels, "metric": metric_name}
         metric_value.labels(**labels).set(result["value"])
-        metric_status.labels(**labels).set(
-            SEVERITY_TO_CODE[result["status"]]
-        )
+        status_code = SEVERITY_TO_CODE[result["status"]]
+        metric_status.labels(**labels).set(status_code)
+        for level in ("warning", "critical"):
+            threshold_value = result.get(level)
+            if threshold_value is not None:
+                resolved_threshold.labels(
+                    **labels,
+                    level=level,
+                ).set(float(threshold_value))
+        metric_key = (feature_name, feature_type, metric_name)
+        metric_state = _next_streak(METRIC_STREAK_STATE.get(metric_key), status_code)
+        METRIC_STREAK_STATE[metric_key] = metric_state
+        _set_streak(metric_status_streak, labels, metric_state)
 
 
 def export_adversarial_validation(timestamp: datetime) -> None:
     """Публикует demo-результат AV для разработки Grafana-панели."""
     auc_values = (0.54, 0.66, 0.80)
-    roc_auc = auc_values[(ANALYSIS_SEQUENCE - 1) % len(auc_values)]
+    scenario_index = ((ANALYSIS_SEQUENCE - 1) // 4) % len(auc_values)
+    roc_auc = auc_values[scenario_index]
     if roc_auc >= AV_CRITICAL_AUC:
         status = 2
     elif roc_auc >= AV_WARNING_AUC:
@@ -328,10 +403,13 @@ def export_adversarial_validation(timestamp: datetime) -> None:
     else:
         status = 0
 
+    global AV_STREAK_STATE
+
     av_available.set(1)
     av_status.set(status)
+    AV_STREAK_STATE = _next_streak(AV_STREAK_STATE, status)
+    _set_streak(av_status_streak, {}, AV_STREAK_STATE)
     av_roc_auc.set(roc_auc)
-    scenario_index = (ANALYSIS_SEQUENCE - 1) % len(auc_values)
     auc_std_values = (0.008, 0.018, 0.032)
     auc_min_values = (0.529, 0.638, 0.761)
     auc_max_values = (0.551, 0.682, 0.839)
@@ -435,17 +513,28 @@ def set_critical_scenario() -> None:
         "kstest": {"warning": 0.1, "critical": 0.2},
         "prediction_psi": {"warning": 0.1, "critical": 0.25},
     }
+    local_thresholds = {
+        "age": {
+            "psi": {"warning": 0.05, "critical": 0.12},
+        },
+    }
 
     def feature_report(
+        feature_name: str,
         feature_type: str,
         values: dict[str, float],
     ) -> dict[str, Any]:
+        """Формирует feature block с global/local resolved thresholds."""
         results: dict[str, dict[str, Any]] = {}
         for metric_name, value in values.items():
             phase = ((ANALYSIS_SEQUENCE + len(metric_name)) % 5) - 2
             value = max(0.0, value * (1.0 + phase * 0.03))
-            warning = thresholds[metric_name]["warning"]
-            critical = thresholds[metric_name]["critical"]
+            resolved = local_thresholds.get(feature_name, {}).get(
+                metric_name,
+                thresholds[metric_name],
+            )
+            warning = resolved["warning"]
+            critical = resolved["critical"]
             if metric_name == "chi2":
                 if value <= critical:
                     status = "critical"
@@ -463,6 +552,8 @@ def set_critical_scenario() -> None:
             results[metric_name] = {
                 "value": value,
                 "status": status,
+                "warning": warning,
+                "critical": critical,
             }
 
         severity = max(
@@ -496,15 +587,15 @@ def set_critical_scenario() -> None:
         "category_churn": 0.03,
     }
     numeric_features = {
-        # три алерта: critical, warning, warning
-        "age": {"psi": 0.31, "missing_rate": 0.06, "wasserstein_distance": 0.15},
-        # два warning-алерта
+        # Один critical и два warning-алерта; PSI использует local override.
+        "age": {"psi": 0.08, "missing_rate": 0.06, "wasserstein_distance": 0.15},
+        # Два warning-алерта.
         "income": {"psi": 0.15, "kstest": 0.15},
-        # один warning-алерт и один critical-алерт
+        # Один warning-алерт и один critical-алерт.
         "tenure": {"js_divergence": 0.15, "wasserstein_distance": 0.30},
-        # один critical-алерт
+        # Один critical-алерт.
         "balance": {"missing_rate": 0.12},
-        # один warning-алерт
+        # Один warning-алерт.
         "transactions": {"missing_rate": 0.06},
         "credit_score": {"psi": 0.05, "missing_rate": 0.01, "wasserstein_distance": 0.05},
         "account_age_days": {"psi": 0.02, "missing_rate": 0.00, "wasserstein_distance": 0.03},
@@ -513,7 +604,7 @@ def set_critical_scenario() -> None:
         "support_tickets": {"psi": 0.06, "missing_rate": 0.03, "wasserstein_distance": 0.05},
     }
     categorical_features = {
-        # один warning-алерт
+        # Один warning-алерт.
         "country": {
             "unseen_category_rate": 0.06,
             "cardinality_ratio": 0.35,
@@ -579,6 +670,7 @@ def set_critical_scenario() -> None:
     features = {
         **{
             name: feature_report(
+                name,
                 "numeric",
                 {**numeric_defaults, **values},
             )
@@ -586,14 +678,15 @@ def set_critical_scenario() -> None:
         },
         **{
             name: feature_report(
+                name,
                 "categorical",
                 {**categorical_defaults, **values},
             )
             for name, values in categorical_features.items()
         },
     }
-    # включить предикт
-    prediction = feature_report("numeric", {
+    # Добавляем prediction-блок в demo report.
+    prediction = feature_report("prediction", "numeric", {
         "prediction_psi": 0.11,
         "missing_rate": 0.01,
         "js_divergence": 0.06,
@@ -659,6 +752,19 @@ FEATURE_LABELS = (
 
 def set_insufficient_data() -> None:
     """Показывает состояние прогрева до анализа первого полного окна."""
+    global OVERALL_STREAK_STATE, AV_STREAK_STATE
+
+    OVERALL_STREAK_STATE = (-1, 0)
+    AV_STREAK_STATE = (-1, 0)
+    FEATURE_STREAK_STATE.clear()
+    METRIC_STREAK_STATE.clear()
+    overall_status_streak.clear()
+    feature_status_streak.clear()
+    metric_status_streak.clear()
+    av_status_streak.clear()
+    for name in ("warning", "critical"):
+        overall_status_streak.labels(status=name).set(0)
+        av_status_streak.labels(status=name).set(0)
 
     stream_status.set(-1)
     overall_status.set(-1)
@@ -666,6 +772,7 @@ def set_insufficient_data() -> None:
     report_timestamp_seconds.set(-1)
     metric_value.clear()
     metric_status.clear()
+    resolved_threshold.clear()
     feature_status.clear()
     av_status.set(-1)
     av_available.set(0)

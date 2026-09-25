@@ -27,6 +27,7 @@ def _status(value: Any) -> str:
 
 
 def _summary_card(label: str, value: Any, status: str | None = None) -> str:
+    """Формирует HTML-карточку summary-блока."""
     status_class = f" status-{_status(status)}" if status else ""
     return f"""
         <article class="summary-card{status_class}">
@@ -37,6 +38,7 @@ def _summary_card(label: str, value: Any, status: str | None = None) -> str:
 
 
 def _metrics(metrics: Mapping[str, Any]) -> str:
+    """Формирует HTML-представление набора метрик."""
     if not metrics:
         return '<span class="muted">No metrics</span>'
     return "<br>".join(
@@ -46,6 +48,7 @@ def _metrics(metrics: Mapping[str, Any]) -> str:
 
 
 def _alerts(alerts: list[Any]) -> str:
+    """Формирует HTML-представление списка alert-сообщений."""
     if not alerts:
         return '<span class="status-text status-passed-text">No alerts</span>'
     items = "".join(f"<li>{_display(alert)}</li>" for alert in alerts)
@@ -53,6 +56,7 @@ def _alerts(alerts: list[Any]) -> str:
 
 
 def _feature_rows(features: Mapping[str, Mapping[str, Any]]) -> str:
+    """Формирует строки таблицы feature monitoring."""
     rows = []
     for name, result in features.items():
         status = _status(result.get("status"))
@@ -163,10 +167,31 @@ def render_report_html(report: Mapping[str, Any], css: str) -> str:
 
 
 def generate_html_report(
-    report: Mapping[str, Any],
-    output_path: str | Path,
+    report: Mapping[str, Any] | str | Path | None = None,
+    output_path: str | Path | None = None,
     css_path: str | Path = DEFAULT_CSS_PATH,
+    *,
+    report_path: str | Path | None = None,
 ) -> Path:
+    """Генерирует HTML-отчёт из mapping или JSON-файла.
+
+    Параметр ``report_path`` сохраняет совместимость с notebook-вызовом,
+    а CLI может передавать positional ``Path`` напрямую.
+    """
+    if report_path is not None:
+        if report is not None:
+            raise ValueError("provide report or report_path, not both")
+        report = report_path
+    if report is None:
+        raise ValueError("report or report_path is required")
+    if output_path is None:
+        raise ValueError("output_path is required")
+
+    if isinstance(report, (str, Path)):
+        report = json.loads(Path(report).read_text(encoding="utf-8"))
+    if not isinstance(report, Mapping):
+        raise TypeError("report must be a mapping or a path to JSON")
+
     output_path = Path(output_path)
     css_path = Path(css_path)
 
@@ -200,6 +225,7 @@ def display_html_report(
 
 
 def main() -> None:
+    """CLI entry point для генерации offline HTML report."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("report", type=Path, help="Path to drift_report.json")
     parser.add_argument("output", type=Path, help="Path to generated HTML")

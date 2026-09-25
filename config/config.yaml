@@ -4,7 +4,7 @@ features:
     metrics:
       - missing_rate
       - psi
-    thresholds:            # <-- override только для этой фичи
+    thresholds:            # Локальный override только для этой feature.
       psi:
         warning: 0.05
         critical: 0.12
@@ -14,7 +14,7 @@ features:
     metrics:
       - missing_rate
       - psi
-    # thresholds не заданы — psi возьмётся из глобальных
+    # Локальные thresholds не заданы: используются глобальные значения.
 
   country:
     type: categorical
@@ -30,14 +30,6 @@ prediction_metrics:
   type: numeric
   metrics:
     - psi
-
-# ROC-AUC thresholds for AV are not specified by the assignment.
-# They are explicit project defaults and can be changed without code edits.
-adversarial_validation:
-  enabled: true
-  thresholds:
-    warning: 0.60
-    critical: 0.75
 
 thresholds:               # глобальные дефолты
   missing_rate:
@@ -57,8 +49,28 @@ stream_drift:
   drift_event_time_lag_seconds:
     warning: 30
     critical: 120
+  # Window-local rate. Lifetime counter late_events_total не используется
+  # как текущий health signal.
   drift_late_event_rate:
     warning: 0.01
     critical: 0.05
-  # остальные поля не заданы — значит не мониторятся
+  # Остальные поля не заданы и не участвуют в расчёте stream_status.
 
+adversarial_validation:
+  enabled: true
+  interval_minutes: 30
+  # Остальные параметры опциональны.
+  max_samples: 50000
+  n_splits: 5
+  random_state: 42
+  missing_category: "__missing__"
+  lightgbm:
+    n_estimators: 200
+    learning_rate: 0.03
+    max_depth: 4
+    num_leaves: 15
+    subsample: 0.8
+    colsample_bytree: 0.8
+    reg_alpha: 1.0
+    reg_lambda: 1.0
+    random_state: 42

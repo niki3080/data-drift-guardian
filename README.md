@@ -1,136 +1,203 @@
 # Data Drift Guardian
 
-Система мониторинга data drift для batch- и realtime-сценариев.
+Data Drift Guardian — сервис мониторинга data drift для batch- и realtime-сценариев. Realtime-контур принимает события из Kafka, формирует полные окна, передаёт их в единый Core анализа и публикует результаты в Prometheus. Grafana используется для визуализации и alerting.
 
-Локальный стенд использует один `docker-compose.yaml` и один конфигурационный
-файл Prometheus. Режим запуска выбирается через профиль Docker Compose:
-
-- `mock` — проверка Prometheus и Grafana без Kafka;
-- `realtime` — Kafka, analyzer, demo producer, Prometheus и Grafana.
-
-Профили запускаются по отдельности: mock-exporter и analyzer используют один
-порт `8000` и общий сетевой alias `drift-exporter`.
-
-## Архитектура realtime
+## Архитектура
 
 ```text
-Kafka producer
-    ↓
-features-stream
-    ↓
+Producer
+  ↓
+Kafka (features-stream)
+  ↓
 Kafka consumer
-    ↓
-KafkaEvent + SchemaChecker
-    ↓
-непересекающееся окно из WINDOW_SIZE событий
-    ↓
+  ↓
+KafkaEvent → WindowBuffer
+  ↓
+полное окно WINDOW_SIZE
+  ↓
 pandas.DataFrame
-    ↓
-EngineAdapter
-    ├── основной drift-report
-    └── adversarial validation
-    ↓
+  ↓
+OfflineWrapper / DriftMetricsEngine
+  ├─ SchemaChecker.check_df
+  ├─ feature/prediction drift
+  └─ adversarial validation
+  ↓
 PrometheusExporter
-    ↓
+  ↓
 Prometheus
-    ↓
-Grafana
+  ↓
+Grafana dashboard + alerting + Telegram
 ```
 
-Realtime-слой отвечает за Kafka, проверку входных данных, сбор окон,
-stream-health, adversarial validation и экспорт результатов в Prometheus.
+Realtime-слой отвечает за ingestion, оконную обработку, stream-health и экспорт. Feature/prediction drift, разрешение global/local thresholds и adversarial validation выполняются через Core.
 
-В текущем состоянии репозитория `src/drift_guardian/engine.py` остаётся
-интеграционной заглушкой и читает основной drift-report из
-`reports/mock_drift_report.json`. Adversarial validation, stream-health,
-Kafka ingestion и Prometheus export выполняются реальным кодом. При общей
-интеграции заглушка должна быть заменена вызовом актуального Core API.
+## Структура ключевых компонентов
+
+```text
+config/config.yaml
+src/drift_guardian/config_handler/        # единый parser и config models
+src/drift_guardian/analyzer/              # Core drift engine и AV
+src/drift_guardian/data_quality_checker/  # schema validation
+src/drift_guardian/ingestion/             # Kafka, окна и realtime runtime
+src/drift_guardian/exporters/             # Prometheus contract
+monitoring/grafana/                       # dashboard и provisioning
+monitoring/mock_exporter/                 # mock monitoring contract
+```
+
+Python-пакет использует `src` layout. Импорты выполняются через `drift_guardian...`; префикс `src.` в runtime-коде не используется.
 
 ## Требования
 
 - Python 3.13+;
 - `uv`;
-- Docker Desktop или Docker Engine;
+- Docker Desktop / Docker Engine;
 - Docker Compose v2.
 
-## Установка
+## Установка и тесты
 
 ```powershell
 uv lock --check
 uv sync --frozen
-```
-
-Для зависимостей ноутбуков:
-
-```powershell
-uv sync --group notebooks
-```
-
-## Тесты
-
-```powershell
 uv run python -m compileall -q src tests monitoring/mock_exporter
-uv run python -m pytest -q
+uv run pytest -q
 ```
 
-Тесты покрывают контракт событий, `SchemaChecker`, reference sampling,
-adversarial validation, оконную обработку, Kafka readiness, stream-health,
-Prometheus contract и Grafana provisioning.
+Конфигурация должна корректно разбираться как YAML, Grafana dashboard — как JSON, а provisioning-файлы Grafana — как YAML.
 
-## Kafka-событие
+## Конфигурация
 
-Пример события:
+Пользовательская конфигурация хранится в:
 
-```json
-{
-  "event_id": 123,
-  "event_time": "2026-09-20T12:00:00Z",
-  "age": 45,
-  "income": 85000,
-  "country": "DE",
-  "prediction_score": 0.72
-}
+```text
+config/config.yaml
 ```
 
-Требования к событию:
+В Docker она доступна как `/app/config/config.yaml`. Parser и модели конфигурации находятся в `src/drift_guardian/config_handler/`.
 
-- `event_id` — строка или целое число;
-- `event_time` — ISO-8601 timestamp с timezone;
-- поля признаков — плоские скалярные JSON-значения;
-- вложенные `list` и `dict` отклоняются;
-- `prediction_score`, если передан, должен быть числом в диапазоне `[0, 1]`.
+Один экземпляр `Config`, созданный `OfflineWrapper`, используется как источник настроек для:
 
-`event_id` и `event_time` не попадают в DataFrame для drift-анализа.
+- feature metrics;
+- prediction metrics;
+- global thresholds;
+- local feature overrides;
+- stream thresholds;
+- adversarial validation.
 
-## Проверка схемы
+Realtime-контур не содержит второго parser конфигурации и отдельной реализации AV.
 
-`SchemaChecker` поддерживает два режима:
+### Global и local thresholds
 
-- `check_event()` — проверка одного Kafka-события через pydantic;
-- `check_df()` — проверка колонок и pandas dtypes для целого DataFrame.
+Глобальные значения задаются в `thresholds`. Локальный override задаётся в `features.<feature>.thresholds`.
 
-Признаки на уровне события считаются optional. Отсутствующее значение
-материализуется как `None`, чтобы drift-метрики могли учитывать пропуски.
-Переданные значения при этом проверяются по типам reference dataset.
+В текущем примере:
 
-Для pandas `category` сравнивается сам тип колонки, а не конкретный набор
-категорий. Nullable integer/boolean dtypes (`Int64`, `boolean` и аналогичные)
-в текущем контракте не поддерживаются.
+```text
+age.psi    → local:  warning=0.05, critical=0.12
+income.psi → global: warning=0.10, critical=0.25
+```
 
-## Окна и Kafka offsets
+Core формирует `resolved_thresholds`; exporter публикует как глобальные, так и фактически применённые значения:
 
-События собираются в полные непересекающиеся окна по `WINDOW_SIZE`.
-После успешного анализа полного окна:
+```text
+drift_threshold{metric,level}
+drift_resolved_threshold{feature,type,metric,level}
+```
 
-1. report экспортируется в Prometheus;
-2. увеличивается `drift_analysis_runs_total`;
-3. Kafka offsets подтверждаются синхронным commit;
-4. окно очищается;
-5. начинается следующее окно.
+## Realtime windows и Kafka offsets
 
-При ошибке анализа commit полного окна не выполняется.
+События собираются в полные непересекающиеся окна размером `WINDOW_SIZE`.
 
-Основные технические метрики:
+После успешного анализа полного окна выполняется последовательность:
+
+1. `WindowBuffer` преобразуется в `pandas.DataFrame`.
+2. Core выполняет schema check и drift-анализ.
+3. Результат экспортируется в Prometheus.
+4. Увеличивается счётчик завершённых анализов.
+5. Kafka offsets подтверждаются синхронным commit.
+6. Окно и window-local stream state сбрасываются.
+
+Если анализ или экспорт завершается ошибкой, commit полного окна не выполняется.
+
+## Stream health
+
+Текущие stream-метрики:
+
+```text
+drift_event_time_lag_seconds
+drift_window_time_span_seconds
+drift_max_event_gap_seconds
+drift_invalid_event_time_rate
+drift_late_event_rate
+```
+
+Lifetime counters:
+
+```text
+drift_late_events_total
+drift_out_of_order_events_total
+```
+
+`drift_stream_status` рассчитывается только по stream-метрикам, для которых в `stream_drift` заданы warning/critical thresholds. Метрики без thresholds остаются информационными и не влияют на общий status.
+
+`drift_late_event_rate` является window-local метрикой. Lifetime counters не используются как текущий health signal и не переводят поток в permanent critical state.
+
+## Adversarial validation
+
+AV настраивается только через блок `adversarial_validation` в `config/config.yaml`:
+
+```yaml
+adversarial_validation:
+  enabled: true
+  interval_minutes: 30
+  max_samples: 50000
+  n_splits: 5
+  random_state: 42
+  missing_category: "__missing__"
+```
+
+Realtime вызывает Core API:
+
+```text
+OfflineWrapper.run_av(...)
+  ↓
+DriftMetricsEngine.run_adversarial_validation(...)
+```
+
+Monitoring получает ROC AUC и fold-level diagnostics:
+
+```text
+drift_av_roc_auc
+drift_av_roc_auc_cv_mean
+drift_av_roc_auc_cv_min
+drift_av_roc_auc_cv_max
+drift_av_roc_auc_cv_std
+drift_av_driver_consistency
+drift_av_driver_similarity_previous
+```
+
+`drift_av_driver_consistency` вычисляется внутри Core AV как средняя cosine similarity feature-importance между CV-фолдами одного запуска. Realtime-слой не пересчитывает эту метрику.
+
+`drift_av_driver_similarity_previous` сравнивает feature importance текущего и предыдущего завершённого AV. Поэтому на первом AV после старта analyzer значение недоступно; со второго завершённого AV в рамках того же процесса exporter публикует similarity. Обычные analysis windows между AV-запусками не создают новое значение: при `interval_minutes: 30` второй similarity появляется только после второго планового AV, а не после второго 1000-event окна.
+
+На окнах, где AV не запускается из-за `interval_minutes`, exporter сохраняет последний успешно опубликованный AV snapshot.
+
+В верхней metadata-панели Grafana наличие prediction monitoring определяется по опубликованным `drift_threshold{metric="prediction_..."}`. Эти thresholds exporter публикует при старте, поэтому dashboard не показывает `Prediction: Not included` только из-за того, что первое analysis window ещё не завершено.
+
+## Prometheus contract
+
+Основные drift-метрики:
+
+```text
+drift_overall_status
+drift_active_alerts
+drift_status_feature{feature,type}
+drift_metric_value{feature,type,metric}
+drift_status{feature,type,metric}
+drift_threshold{metric,level}
+drift_resolved_threshold{feature,type,metric,level}
+```
+
+Realtime state:
 
 ```text
 drift_window_size
@@ -138,59 +205,10 @@ drift_current_window_events
 drift_events_processed_total
 drift_analysis_runs_total
 drift_last_analysis_age_seconds
+drift_stream_status
 ```
 
-Количество событий в текущем окне публикуется напрямую из фактического
-состояния `WindowBuffer`:
-
-```promql
-drift_current_window_events
-```
-
-После добавления принятого события Gauge получает `len(window)`. После
-успешного анализа, синхронного commit и очистки окна он сбрасывается в `0`.
-Если анализ или commit завершается ошибкой, Gauge сохраняет фактический размер
-неочищенного окна.
-
-## Счётчики и выбранный период
-
-Счётчики `drift_events_processed_total`, `drift_analysis_runs_total`,
-`drift_out_of_order_events_total` и `drift_late_events_total` считаются с
-момента запуска текущего exporter/analyzer. После перезапуска процесса они
-начинаются с нуля. Это представление **Since exporter start**.
-
-Для **Over Selected Period** Grafana считает прирост каждого Counter за
-выбранный диапазон. `increase()` учитывает сбросы Counter при перезапусках,
-`sum()` объединяет временные ряды, а округление выполняется после суммирования:
-
-```promql
-round(sum(increase(drift_events_processed_total[$__range]))) or on() vector(-999)
-round(sum(increase(drift_analysis_runs_total[$__range]))) or on() vector(-999)
-round(sum(increase(drift_out_of_order_events_total[$__range]))) or on() vector(-999)
-round(sum(increase(drift_late_events_total[$__range]))) or on() vector(-999)
-```
-
-Поэтому значение за выбранный период может быть больше текущего значения
-`Since exporter start`, если диапазон включает события до последнего перезапуска
-или несколько временных рядов. Служебное значение `-999` отображается в панели
-как отсутствие данных.
-
-## Drift report и Prometheus
-
-Основной контракт drift-метрик:
-
-```text
-drift_overall_status
-drift_active_alerts
-drift_report_timestamp_seconds
-
-drift_status_feature{feature,type}
-drift_metric_value{feature,type,metric}
-drift_status{feature,type,metric}
-drift_threshold{metric,level}
-```
-
-Статусы:
+Коды статусов:
 
 ```text
 -1 = insufficient_data / not configured
@@ -199,353 +217,201 @@ drift_threshold{metric,level}
  2 = critical
 ```
 
-Глобальные пороги задаются в `thresholds`. Для отдельной feature можно задать
-override в `features.<feature>.thresholds`. При этом
-`drift_threshold{metric,level}` продолжает отображать глобальные пороги.
+## Grafana и alerting
 
-Для обычных drift-метрик используется направление:
+Grafana provisioning находится в:
 
 ```text
-warning < critical
+monitoring/grafana/provisioning/alerting/
+  alert-rules.yaml
+  contact-points.yaml
+  mute-timings.yaml
+  policies.yaml
+  templates.yaml
 ```
 
-Для `chi2` экспортируется p-value, поэтому направление обратное:
+Alert rules для drift/AV используют подтверждение состояния на четырёх последовательных analysis windows. Отдельный alert по `stream_status` не создаётся.
 
-```text
-warning > critical
+Telegram contact point использует локальную переменную окружения:
+
+```env
+TELEGRAM_BOT_TOKEN=<real_bot_token>
 ```
 
-## Reference data
+`.env` не должен попадать в Git. Без непустого `TELEGRAM_BOT_TOKEN` Grafana не сможет provision Telegram contact point.
 
-Reference dataset загружается один раз. Для realtime формируется
-детерминированная выборка размером до:
+## Docker profiles
 
-```text
-REFERENCE_SAMPLE_MULTIPLIER * WINDOW_SIZE
-```
+Используются два взаимоисключающих режима:
 
-По умолчанию `REFERENCE_SAMPLE_MULTIPLIER=10`.
+- `mock` — проверка monitoring-контракта без Kafka/Core;
+- `realtime` — полный Kafka → Core → Prometheus pipeline.
 
-Метаданные reference sample экспортируются отдельно:
+`kafka`, `prometheus` и `grafana` являются общей инфраструктурой. При переключении режима они **не удаляются и не пересоздаются**. Также сохраняются project network, `grafana-data` и Docker images.
 
-```text
-drift_reference_profile_info{dataset_name,profile_created_at}
-drift_reference_sample_size
-```
+`drift-mock-exporter` и `analyzer` используют host port `8000`, поэтому одновременно запускать `mock` и `realtime` нельзя.
 
-Исходные CSV/Parquet-файлы размещаются в `data/` и не коммитятся в репозиторий.
-Demo reference создаётся автоматически, если файл из `REFERENCE_DATA_PATH`
-отсутствует и `GENERATE_DEMO_REFERENCE=true`.
-
-Ручная генерация:
+### Первый запуск общей инфраструктуры
 
 ```powershell
-uv run python -m drift_guardian.ingestion.demo_reference `
-  --output data/demo_reference.csv `
-  --rows 10000 `
-  --seed 42
+docker compose up -d kafka prometheus grafana
 ```
 
-## Adversarial validation
+Kafka остаётся поднятой и в mock, и в realtime. `kafka-init` при этом остаётся realtime one-shot сервисом: он создаёт `features-stream` перед запуском analyzer и завершается с кодом `0`.
 
-Adversarial validation запускается после основного анализа полного окна, если:
-
-```text
-ENABLE_ADVERSARIAL_VALIDATION=true
-```
-
-LightGBM обучается различать reference и current. Датасеты балансируются до
-одинакового размера, ROC-AUC рассчитывается по out-of-fold предсказаниям,
-feature importance усредняется по CV-фолдам.
-
-Основной Prometheus-контракт AV:
-
-```text
-drift_av_status
-drift_av_roc_auc
-drift_av_last_run_timestamp_seconds
-drift_av_dataset_size
-drift_av_feature_importance{feature,rank}
-```
-
-Дополнительные диагностические метрики:
-
-```text
-drift_av_available
-drift_av_roc_auc_cv_mean
-drift_av_roc_auc_cv_min
-drift_av_roc_auc_cv_max
-drift_av_roc_auc_cv_std
-drift_av_driver_consistency
-drift_av_driver_similarity_previous
-drift_av_reference_rows
-drift_av_current_rows
-drift_av_features_evaluated
-drift_av_sample_fraction{dataset}
-drift_av_threshold{level}
-drift_av_top1_importance_share
-drift_av_top3_importance_share
-```
-
-`drift_av_dataset_size` — размер каждого из двух сбалансированных классов,
-использованных AV. `drift_av_driver_consistency` показывает согласованность
-importance между CV-фолдами. `drift_av_driver_similarity_previous` сравнивает
-importance текущего и предыдущего завершённого AV-запуска.
-
-По умолчанию экспортируется до 10 наиболее важных признаков:
-
-```text
-ADVERSARIAL_TOP_FEATURES=10
-```
-
-Если доступно меньше признаков, экспортируется фактическое количество.
-
-Пороги AV задаются в `config/config.yaml`:
-
-```yaml
-adversarial_validation:
-  enabled: true
-  thresholds:
-    warning: 0.60
-    critical: 0.75
-```
-
-Статус считается так:
-
-```text
-ROC-AUC < warning              -> ok
-warning <= ROC-AUC < critical -> warning
-ROC-AUC >= critical            -> critical
-```
-
-Если AV выключен или результат ещё не получен,
-`drift_av_available=0`, а `drift_av_status=-1`.
-
-## Stream health
-
-Публичные stream-метрики:
-
-```text
-drift_stream_status
-drift_event_time_lag_seconds
-drift_window_time_span_seconds
-drift_max_event_gap_seconds
-drift_invalid_event_time_rate
-drift_late_event_rate
-drift_late_events_total
-drift_out_of_order_events_total
-drift_stream_threshold{metric,level}
-```
-
-На итоговый `drift_stream_status` влияют только метрики, перечисленные в
-`stream_drift` конфигурации. Остальные stream-метрики продолжают экспортироваться
-как диагностика.
-
-До первого успешно завершённого окна статус равен `-1`. После этого выбирается
-наихудший статус среди настроенных stream-метрик. В текущей конфигурации статус
-учитывает lag последнего события и долю late-событий текущего окна. Накопительный
-`drift_late_events_total` остаётся диагностическим Counter и не может навсегда
-зафиксировать статус в `critical`.
-
-В начале каждого нового окна обнуляются
-`drift_window_time_span_seconds`, `drift_max_event_gap_seconds`,
-`drift_invalid_event_time_rate` и `drift_late_event_rate`. Эти значения
-публикуются сразу после очистки завершённого окна. `drift_event_time_lag_seconds`
-обновляется при каждом валидном событии как разница между временем обработки и
-его `event_time`.
-
-`drift_late_event_rate` — доля late-событий среди валидных событий текущего
-окна. Именно она участвует в расчёте `drift_stream_status`; накопительный
-`drift_late_events_total` остаётся диагностическим Counter и не может навсегда
-зафиксировать статус `critical`.
-
-В Grafana используется mapping:
-
-```text
-0 = Healthy
-1 = Degraded
-2 = Unhealthy
-```
-
-Для AV history:
-
-```text
-0 = Healthy
-1 = Warning
-2 = Critical
-```
-
-## Mock profile
-
-Mock используется для проверки Prometheus и Grafana без Kafka:
+Проверка:
 
 ```powershell
-docker compose --profile mock up --build --force-recreate -d
+docker compose ps
+curl.exe -s http://localhost:3000/api/health
+```
+
+### Mock
+
+Запуск только mock exporter:
+
+```powershell
+docker compose --profile mock up -d --build drift-mock-exporter
+```
+
+Проверка:
+
+```powershell
 docker compose --profile mock ps -a
+curl.exe -s http://localhost:8000/metrics | Select-String "drift_"
+curl.exe -s http://localhost:8000/metrics | Select-String "drift_resolved_threshold"
 ```
 
-Mock содержит 20 признаков и prediction, смешанные статусы, изменение metric
-values между анализами, demo AV и циклический stream status.
-
-Late-события в mock генерируются из того же потока, из которого рассчитывается
-`drift_late_event_rate`: nominal rate составляет `2.5%` в warning-фазе и около
-`8.3%` в critical-фазе. `drift_late_events_total` увеличивается только для этих
-же событий и не сбрасывается между окнами. Out-of-order события генерируются с
-nominal rate `1%` и `4%` соответственно. На границе фаз текущее окно может
-содержать события из двух фаз, поэтому его фактическая доля меняется плавно.
-
-После запуска доступны:
-
-- Grafana: `http://localhost:3000`;
-- Prometheus: `http://localhost:9090`;
-- exporter: `http://localhost:8000/metrics`.
-
-Остановка:
+Перед переходом в realtime удалить только профильный mock-контейнер:
 
 ```powershell
-docker compose --profile mock down --remove-orphans
+docker compose --profile mock stop drift-mock-exporter
+docker compose --profile mock rm -f drift-mock-exporter
 ```
 
-## Realtime profile
-
-Запуск полного pipeline:
+Порт `8000` после этого должен быть свободен:
 
 ```powershell
-docker compose --profile realtime up --build --force-recreate -d
+docker ps --filter "publish=8000" --format "table {{.Names}}\t{{.Ports}}"
+```
+
+### Realtime
+
+Запуск профильных realtime-сервисов без пересоздания Kafka, Prometheus и Grafana:
+
+```powershell
+docker compose --profile realtime up -d --build kafka-init analyzer drift-producer
+```
+
+Проверка состояния:
+
+```powershell
 docker compose --profile realtime ps -a
 ```
 
-Ожидаемые сервисы:
+Ожидаемое состояние:
 
 ```text
-kafka
-kafka-init
-analyzer
-drift-producer
-prometheus
-grafana
+kafka           Up (healthy)
+kafka-init      Exited (0)
+analyzer        Up (healthy)
+drift-producer  Up
+prometheus      Up
+Grafana         Up
 ```
 
-`kafka-init` должен завершиться с кодом `0`. Producer стартует после успешного
-healthcheck analyzer.
-
-Проверка analyzer:
+Проверка analyzer и exporter:
 
 ```powershell
-docker compose logs --tail=150 analyzer
+docker compose --profile realtime logs --tail=200 analyzer
+curl.exe -s http://localhost:8000/metrics | Select-String "drift_"
 ```
 
-Проверка Kafka topic:
-
-```powershell
-docker compose exec kafka /opt/kafka/bin/kafka-topics.sh `
-  --bootstrap-server localhost:19092 `
-  --describe `
-  --topic features-stream
-```
-
-Проверка exporter:
-
-```powershell
-curl.exe -s http://localhost:8000/metrics
-```
-
-## Grafana и Prometheus
-
-Dashboard загружается автоматически через Grafana provisioning из:
+Prometheus target:
 
 ```text
-monitoring/grafana/dashboards/drift_guardian.json
+http://localhost:9090/targets
 ```
 
-Ручной import JSON не нужен.
-
-Адреса:
+Grafana:
 
 ```text
-Grafana             http://localhost:3000
-Prometheus          http://localhost:9090
-Prometheus targets  http://localhost:9090/targets
-Exporter            http://localhost:8000/metrics
+http://localhost:3000
 ```
 
-Для history используется относительный диапазон времени и автоматическое
-обновление dashboard.
-
-AV row содержит status, ROC-AUC, worst-fold AUC, CV std, согласованность
-feature importance между фолдами, similarity с предыдущим окном, top drivers и
-технический diagnostic block.
-
-## Основные переменные окружения
-
-| Переменная | По умолчанию | Назначение |
-| --- | --- | --- |
-| `WINDOW_SIZE` | `1000` | Размер окна анализа |
-| `KAFKA_TOPIC` | `features-stream` | Kafka topic |
-| `KAFKA_GROUP_ID` | `drift-consumer` | Consumer group |
-| `KAFKA_STARTUP_TIMEOUT_SECONDS` | `60` | Таймаут ожидания Kafka topic |
-| `KAFKA_STARTUP_RETRY_SECONDS` | `1` | Интервал readiness check |
-| `LATE_EVENT_THRESHOLD_SECONDS` | `60` | Порог late-event |
-| `REFERENCE_DATA_PATH` | `/app/data/demo_reference.csv` | Reference dataset |
-| `GENERATE_DEMO_REFERENCE` | `true` | Автогенерация demo reference |
-| `DEMO_REFERENCE_ROWS` | `10000` | Размер demo reference |
-| `DEMO_REFERENCE_SEED` | `42` | Seed demo data |
-| `REFERENCE_SAMPLE_MULTIPLIER` | `10` | Размер reference sample относительно окна |
-| `REFERENCE_SAMPLE_RANDOM_STATE` | `42` | Seed reference sampling |
-| `ENABLE_SCHEMA_CHECK` | `true` | Проверка схемы |
-| `ENABLE_ADVERSARIAL_VALIDATION` | `true` | Запуск AV |
-| `ADVERSARIAL_TOP_FEATURES` | `10` | Число AV importance для экспорта |
-| `PRODUCER_INTERVAL_SECONDS` | `0.2` | Интервал demo producer |
-
-## Быстрая end-to-end проверка
+Перед возвратом в mock удалить только профильные realtime-контейнеры:
 
 ```powershell
-docker compose --profile realtime up --build --force-recreate -d
+docker compose --profile realtime stop drift-producer analyzer
+docker compose --profile realtime rm -f drift-producer analyzer kafka-init
+```
+
+Kafka, Prometheus, Grafana, `drift_guardian_default`, `grafana-data` и images при обычном переключении сохраняются.
+
+
+### Разделение истории mock и realtime
+
+Prometheus хранит mock и realtime как отдельные scrape targets. Публичный label `job="drift-exporter"` сохраняется, а источники различаются стандартным Prometheus label `instance`. Дополнительный `mode` label не добавляется, поэтому техническое различие источников не появляется отдельной колонкой в таблицах Grafana.
+
+History-панели Grafana фильтруются по exporter instance, активному в конце выбранного периода. Поэтому после переключения:
+
+```text
+mock     -> отображаются mock prediction metrics;
+realtime -> отображаются только prediction metrics, реально включённые в config.
+```
+
+В текущем realtime config для prediction включён только `psi`, поэтому старые mock-линии JS divergence / KS test / Missing rate / Wasserstein не смешиваются с realtime-графиком. История Prometheus при этом не удаляется.
+
+### Полный сброс Docker-состояния проекта
+
+Полная очистка не используется для обычного переключения режимов. Она нужна только для явного сброса всего Compose project:
+
+```powershell
+docker compose --profile mock --profile realtime down --remove-orphans --volumes
+```
+
+При необходимости дополнительно удалить локально собранные project images:
+
+```powershell
+docker compose --profile mock --profile realtime down --remove-orphans --volumes --rmi local
+```
+
+## Диагностика realtime startup
+
+Если `analyzer` долго остаётся в `Waiting` / `health: starting`, проверить:
+
+```powershell
 docker compose --profile realtime ps -a
-docker compose logs --tail=100 analyzer
+docker compose --profile realtime logs --tail=200 analyzer
+docker inspect drift_guardian-analyzer-1 --format "{{json .State.Health}}"
+docker compose --profile realtime logs kafka-init
 ```
 
-Ключевые runtime-метрики:
+`kafka-init` должен завершиться с кодом `0`; topic `features-stream` должен быть доступен по `kafka:19092` внутри Compose network.
+
+## Offline HTML report
 
 ```powershell
-curl.exe -s http://localhost:8000/metrics |
-  Select-String "drift_current_window_events|drift_window_size|drift_events_processed_total|drift_analysis_runs_total|drift_late_event_rate|drift_stream_status|drift_av_roc_auc"
+uv run drift-guardian-report <report.json> <output.html>
 ```
 
-После первого полного окна:
+`generate_html_report()` принимает как in-memory mapping, так и путь к JSON-файлу.
 
-- `drift_events_processed_total` должен быть больше `0`;
-- `drift_analysis_runs_total` должен быть больше `0`;
-- `drift_current_window_events` должен находиться в диапазоне от `0` до
-  `drift_window_size` и сбрасываться после полного окна;
-- `drift_late_event_rate` должен отражать долю late-событий текущего окна и
-  сбрасываться после полного окна;
-- `drift_av_available` должен стать `1`, если AV включён;
-- `drift_av_feature_importance` должен содержать хотя бы один признак;
-- targets Prometheus `prometheus` и `drift-exporter` должны быть `UP`.
+## Код-стиль
 
-## Остановка
+- imports — через `drift_guardian...`;
+- публичные функции и структуры данных имеют type hints;
+- нетривиальные функции и методы имеют docstring;
+- технические docstring и комментарии в Python-коде оформляются на русском языке;
+- комментарии описывают контракт или причину решения и не дублируют код;
+- realtime-слой не дублирует Core/config/AV реализацию.
 
-Realtime:
+## Секреты и локальные данные
 
-```powershell
-docker compose --profile realtime down --remove-orphans
-```
+Не коммитятся:
 
-Mock:
-
-```powershell
-docker compose --profile mock down --remove-orphans
-```
-
-Для полного сброса Docker volumes можно добавить флаг `--volumes`.
-
-## Проверка перед коммитом
-
-```powershell
-uv lock --check
-uv sync --frozen
-uv run python -m compileall -q src tests monitoring/mock_exporter
-uv run python -m pytest -q
-git -c core.whitespace=cr-at-eol diff --check
-```
+- `.env`;
+- Telegram bot token;
+- локальные datasets;
+- сгенерированные отчёты;
+- временные backup-файлы.

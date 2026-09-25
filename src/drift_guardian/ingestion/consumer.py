@@ -9,23 +9,24 @@ from threading import Event
 from typing import Any, Callable
 
 from drift_guardian.exporters.prometheus_exporter import PrometheusExporter
-from drift_guardian.ingestion.engine_adapter import build_engine_adapter_from_env
 from drift_guardian.ingestion.event import InvalidEventTime, KafkaEvent
+from drift_guardian.ingestion.runtime import (
+    RuntimeContext,
+    analyze_current_dataframe,
+    build_runtime_from_env,
+)
 from drift_guardian.ingestion.stream_metrics import (
     StreamTracker,
-    load_stream_thresholds,
+    stream_thresholds_from_config,
 )
-from drift_guardian.ingestion.window import Analyzer, WindowBuffer, analyze_window
+from drift_guardian.ingestion.window import WindowBuffer
 
 LOGGER = logging.getLogger(__name__)
 STOP = Event()
 
 
-# ------------------------------------------------------------------ #
-# Управление процессом и готовностью Kafka
-# ------------------------------------------------------------------ #
 def stop(*_: object) -> None:
-    """Останавливает consumer по системному сигналу."""
+    """Запрашивает корректное завершение consumer loop."""
     STOP.set()
 
 
@@ -39,7 +40,7 @@ def wait_for_kafka_topic(
     monotonic: Callable[[], float] = time.monotonic,
     sleep: Callable[[float], None] = time.sleep,
 ) -> None:
-    """Ждёт готовности Kafka broker и нужного топика перед запуском consumer."""
+    """Ожидает доступности Kafka broker и настроенного topic."""
     if timeout_seconds <= 0:
         raise ValueError("KAFKA_STARTUP_TIMEOUT_SECONDS must be positive")
     if retry_interval_seconds <= 0:
@@ -53,18 +54,12 @@ def wait_for_kafka_topic(
     admin = admin_client_factory(
         {
             "bootstrap.servers": bootstrap_servers,
-            # На старте Docker broker может ещё не принимать соединения.
-            # отключаем лишний шум librdkafka и оставляем собственный лог готовности
             "log_level": 0,
         }
     )
     deadline = monotonic() + timeout_seconds
     last_error: Exception | None = None
-    LOGGER.info(
-        "waiting for Kafka topic=%s bootstrap=%s",
-        topic,
-        bootstrap_servers,
-    )
+    LOGGER.info("waiting for Kafka topic=%s bootstrap=%s", topic, bootstrap_servers)
 
     while True:
         remaining = deadline - monotonic()
@@ -90,43 +85,48 @@ def wait_for_kafka_topic(
                 return
             if topic_metadata is not None and topic_metadata.error is not None:
                 last_error = RuntimeError(str(topic_metadata.error))
-        except Exception as exc:  # confluent-kafka может вернуть разные типы ошибок
+        except Exception as exc:
             last_error = exc
 
         sleep(min(retry_interval_seconds, max(0.0, remaining)))
 
 
-def _reference_metadata(analyzer: Any) -> dict[str, Any] | None:
-    provider = getattr(analyzer, "get_reference_metadata", None)
-    if callable(provider):
-        metadata = provider()
-        return metadata if isinstance(metadata, dict) else None
-    metadata = getattr(analyzer, "reference_metadata", None)
-    return metadata if isinstance(metadata, dict) else None
+def _export_completed_analysis(
+    exporter: PrometheusExporter,
+    runtime: RuntimeContext,
+    report: dict[str, Any],
+    adversarial_result: tuple[float, Any] | None,
+    *,
+    adversarial_executed: bool,
+    current_rows: int,
+) -> None:
+    """Экспортирует Core-report и результат планового AV-запуска."""
+    exporter.update_report(report)
 
+    if not adversarial_executed:
+        # AV запускается по интервалу. На обычных окнах сохраняем последний
+        # успешно опубликованный AV snapshot.
+        return
 
-def _validate_features(analyzer: Any, event: KafkaEvent) -> KafkaEvent:
-    validator = getattr(analyzer, "validate_features", None)
-    if not callable(validator):
-        return event
-    validated = validator(event.features)
-    if not isinstance(validated, dict):
-        raise TypeError("validate_features must return dict[str, Any]")
-    return KafkaEvent(
-        event_id=event.event_id,
-        event_time=event.event_time,
-        features=validated,
+    if adversarial_result is None:
+        # Плановый запуск AV завершился ошибкой или не вернул результат.
+        exporter.update_adversarial_validation(None)
+        return
+
+    roc_auc, importance = adversarial_result
+    exporter.update_adversarial_validation_result(
+        roc_auc,
+        importance,
+        timestamp=report.get("timestamp"),
+        thresholds=runtime.adversarial_thresholds,
+        reference_rows=runtime.reference_sample_size,
+        current_rows=current_rows,
+        top_features=runtime.adversarial_top_features,
     )
 
 
-# ------------------------------------------------------------------ #
-# Основной consumer loop
-# ------------------------------------------------------------------ #
-def run(
-    analyzer: Analyzer,
-    reference_metadata: dict[str, Any] | None = None,
-) -> None:
-    """Запускает основной цикл чтения Kafka и анализа полных окон."""
+def run(runtime: RuntimeContext) -> None:
+    """Читает Kafka-события и анализирует полные непересекающиеся окна."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
@@ -138,13 +138,8 @@ def run(
     window_size = int(os.getenv("WINDOW_SIZE", "1000"))
     prometheus_port = int(os.getenv("PROMETHEUS_PORT", "8000"))
     late_threshold = float(os.getenv("LATE_EVENT_THRESHOLD_SECONDS", "60"))
-    config_path = os.getenv("DRIFT_CONFIG_PATH", "config/config.yaml")
-    kafka_startup_timeout = float(
-        os.getenv("KAFKA_STARTUP_TIMEOUT_SECONDS", "60")
-    )
-    kafka_startup_retry = float(
-        os.getenv("KAFKA_STARTUP_RETRY_SECONDS", "1")
-    )
+    kafka_startup_timeout = float(os.getenv("KAFKA_STARTUP_TIMEOUT_SECONDS", "60"))
+    kafka_startup_retry = float(os.getenv("KAFKA_STARTUP_RETRY_SECONDS", "1"))
 
     if window_size <= 0:
         raise ValueError("WINDOW_SIZE must be positive")
@@ -159,17 +154,16 @@ def run(
     )
 
     window = WindowBuffer(window_size)
-    stream_thresholds = load_stream_thresholds(config_path)
+    stream_thresholds = stream_thresholds_from_config(runtime.config)
     stream = StreamTracker(
         late_event_threshold_seconds=late_threshold,
         thresholds=stream_thresholds,
     )
     exporter = PrometheusExporter()
     exporter.set_window_size(window_size)
+    exporter.update_drift_thresholds(runtime.config)
     exporter.update_stream_thresholds(stream_thresholds)
-    exporter.update_reference_profile(
-        reference_metadata or _reference_metadata(analyzer)
-    )
+    exporter.update_reference_profile(runtime.reference_metadata())
     metrics_server, metrics_thread = exporter.start_http_server(prometheus_port)
 
     consumer = Consumer(
@@ -185,11 +179,7 @@ def run(
 
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
-    LOGGER.info(
-        "consumer started topic=%s window_size=%s",
-        topic,
-        window_size,
-    )
+    LOGGER.info("consumer started topic=%s window_size=%s", topic, window_size)
 
     completed_analyses = 0
 
@@ -214,7 +204,6 @@ def run(
                 if not isinstance(payload, dict):
                     raise ValueError("Kafka message must contain a JSON object")
                 event = KafkaEvent.from_dict(payload)
-                event = _validate_features(analyzer, event)
             except InvalidEventTime as exc:
                 LOGGER.warning(
                     "invalid event_time offset=%s: %s",
@@ -223,10 +212,7 @@ def run(
                 )
                 stream.record_invalid_event_time()
                 exporter.update_stream(
-                    stream.snapshot(
-                        window.event_times(),
-                        ready=completed_analyses > 0,
-                    )
+                    stream.snapshot(window.event_times(), ready=completed_analyses > 0)
                 )
                 consumer.store_offsets(message=message)
                 continue
@@ -236,11 +222,7 @@ def run(
                 json.JSONDecodeError,
                 ValueError,
             ) as exc:
-                LOGGER.warning(
-                    "invalid event offset=%s: %s",
-                    message.offset(),
-                    exc,
-                )
+                LOGGER.warning("invalid event offset=%s: %s", message.offset(), exc)
                 consumer.store_offsets(message=message)
                 continue
 
@@ -249,37 +231,34 @@ def run(
             stream.observe(event)
             exporter.record_processed_event()
             consumer.store_offsets(message=message)
-
             exporter.update_stream(
-                stream.snapshot(
-                    window.event_times(),
-                    ready=completed_analyses > 0,
-                )
+                stream.snapshot(window.event_times(), ready=completed_analyses > 0)
             )
 
-            if window.is_full:
-                report = analyze_window(window, analyzer)
-                if report is None:
-                    raise RuntimeError("full analysis window produced no report")
+            if not window.is_full:
+                continue
 
-                # анализ считаем завершённым только после успешного Core
-                # и экспорта отчёта.
-                exporter.update_report(report)
-                exporter.record_analysis_run()
-                completed_analyses += 1
+            current_df = window.to_dataframe()
+            report, adversarial_result = analyze_current_dataframe(runtime, current_df)
+            _export_completed_analysis(
+                exporter,
+                runtime,
+                report,
+                adversarial_result,
+                adversarial_executed=runtime._av_executed_last_analysis,
+                current_rows=len(current_df),
+            )
+            exporter.record_analysis_run()
+            completed_analyses += 1
 
-                # подтверждаем offsets только после полного успешного окна,
-                # затем начинаем собирать следующее непересекающееся окно.
-                consumer.commit(asynchronous=False)
-                window.clear()
-                exporter.set_current_window_events(len(window))
-                stream.reset_window()
-                exporter.update_stream(
-                    stream.snapshot(
-                        window.event_times(),
-                        ready=completed_analyses > 0,
-                    )
-                )
+            # Offset подтверждается только после успешных Core-анализа и экспорта.
+            consumer.commit(asynchronous=False)
+            window.clear()
+            exporter.set_current_window_events(0)
+            stream.reset_window()
+            exporter.update_stream(
+                stream.snapshot(window.event_times(), ready=True)
+            )
     finally:
         consumer.close()
         metrics_server.shutdown()
@@ -289,10 +268,10 @@ def run(
 
 
 def main() -> None:
-    """Создаёт analyzer из env и запускает realtime consumer."""
+    """Создаёт runtime-контекст и запускает realtime consumer."""
     window_size = int(os.getenv("WINDOW_SIZE", "1000"))
-    analyzer = build_engine_adapter_from_env(window_size)
-    run(analyzer=analyzer)
+    runtime = build_runtime_from_env(window_size)
+    run(runtime)
 
 
 if __name__ == "__main__":

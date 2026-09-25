@@ -22,12 +22,10 @@ services:
       GENERATE_DEMO_REFERENCE: ${GENERATE_DEMO_REFERENCE:-true}
       DEMO_REFERENCE_ROWS: ${DEMO_REFERENCE_ROWS:-10000}
       DEMO_REFERENCE_SEED: ${DEMO_REFERENCE_SEED:-42}
-      REFERENCE_SAMPLE_MULTIPLIER: ${REFERENCE_SAMPLE_MULTIPLIER:-10}
-      REFERENCE_SAMPLE_RANDOM_STATE: ${REFERENCE_SAMPLE_RANDOM_STATE:-42}
       DRIFT_CONFIG_PATH: /app/config/config.yaml
-      ENABLE_SCHEMA_CHECK: ${ENABLE_SCHEMA_CHECK:-true}
-      ENABLE_ADVERSARIAL_VALIDATION: ${ENABLE_ADVERSARIAL_VALIDATION:-true}
       ADVERSARIAL_TOP_FEATURES: ${ADVERSARIAL_TOP_FEATURES:-10}
+      AV_WARNING_THRESHOLD: ${AV_WARNING_THRESHOLD:-0.60}
+      AV_CRITICAL_THRESHOLD: ${AV_CRITICAL_THRESHOLD:-0.75}
       PROMETHEUS_PORT: 8000
     volumes:
       - ./data:/app/data
@@ -62,6 +60,8 @@ services:
         aliases:
           - drift-exporter
 
+  # Kafka, Prometheus и Grafana — общая инфраструктура без profile.
+  # При переключении mock/realtime эти сервисы остаются запущенными.
   prometheus:
     image: prom/prometheus:v3.14.0
     restart: unless-stopped
@@ -81,15 +81,18 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
       GF_AUTH_ANONYMOUS_HIDE_VERSION: "true"
+
+      # Token для Grafana alerting provisioning задаётся в локальном .env.
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
     volumes:
       - grafana-data:/var/lib/grafana
+
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - prometheus
 
   kafka:
-    profiles: ["realtime"]
     image: apache/kafka:4.3.1
     ports:
       - "9092:9092"

@@ -1,5 +1,6 @@
 import re
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 from prometheus_client import CollectorRegistry, generate_latest
@@ -7,10 +8,12 @@ from prometheus_client import CollectorRegistry, generate_latest
 from drift_guardian.exporters.prometheus_exporter import PrometheusExporter
 from drift_guardian.ingestion.consumer import wait_for_kafka_topic
 from drift_guardian.ingestion.event import InvalidEventTime, KafkaEvent
+from drift_guardian.ingestion.runtime import AvThresholds, RuntimeContext
 from drift_guardian.ingestion.stream_metrics import (
     StreamThresholds,
     StreamTracker,
     ThresholdPair,
+    stream_thresholds_from_config,
 )
 from drift_guardian.ingestion.window import WindowBuffer, analyze_window
 
@@ -205,6 +208,50 @@ def test_stream_quality_is_window_local_and_worst_status_wins() -> None:
     snapshot = tracker.snapshot(window.event_times(), ready=True)
     assert snapshot.invalid_event_time_rate == 0.0
     assert snapshot.status == 0
+
+
+def test_runtime_av_schedule_uses_core_config_as_source_of_truth() -> None:
+    core = SimpleNamespace(
+        config=SimpleNamespace(
+            adversarial_validation=SimpleNamespace(
+                enabled=True,
+                interval_minutes=30,
+            )
+        )
+    )
+    runtime = RuntimeContext(
+        core=core,
+        dataset_name="demo",
+        profile_created_at="2026-09-24T00:00:00Z",
+        adversarial_thresholds=AvThresholds(0.60, 0.75),
+        adversarial_top_features=10,
+    )
+
+    assert runtime.av_due(100.0) is True
+    runtime._last_av_monotonic = 100.0
+    assert runtime.av_due(100.0 + 30 * 60 - 1) is False
+    assert runtime.av_due(100.0 + 30 * 60) is True
+
+    core.config.adversarial_validation.enabled = False
+    assert runtime.av_due(10_000.0) is False
+
+
+def test_stream_thresholds_are_resolved_from_existing_config_object() -> None:
+    config = SimpleNamespace(
+        stream_drift=SimpleNamespace(
+            drift_event_time_lag_seconds=SimpleNamespace(warning=30, critical=120),
+            drift_window_time_span_seconds=None,
+            drift_max_event_gap_seconds=None,
+            drift_invalid_event_time_rate=None,
+            drift_late_event_rate=SimpleNamespace(warning=0.01, critical=0.05),
+        )
+    )
+
+    thresholds = stream_thresholds_from_config(config)
+
+    assert thresholds.event_time_lag_seconds == ThresholdPair(30.0, 120.0)
+    assert thresholds.late_event_rate == ThresholdPair(0.01, 0.05)
+    assert thresholds.window_time_span_seconds is None
 
 
 def test_stream_status_is_insufficient_without_configured_thresholds() -> None:
@@ -415,10 +462,10 @@ def test_exporter_supports_generic_report_contract() -> None:
         'drift_status_feature{feature="age",type="numeric"} 2.0',
         'drift_metric_value{feature="age",metric="psi",type="numeric"} 0.31',
         'drift_status{feature="age",metric="psi",type="numeric"} 2.0',
-        'drift_threshold{level="warning",metric="psi"} 0.1',
+        'drift_resolved_threshold{feature="age",level="warning",metric="psi",type="numeric"} 0.1',
         'drift_metric_value{feature="prediction",'
         'metric="prediction_psi",type="numeric"} 0.14',
-        'drift_threshold{level="warning",metric="prediction_psi"} 0.1',
+        'drift_resolved_threshold{feature="prediction",level="warning",metric="prediction_psi",type="numeric"} 0.1',
         "drift_analysis_runs_total 1.0",
         'drift_stream_threshold{level="warning",'
         'metric="drift_invalid_event_time_rate"} 0.05',

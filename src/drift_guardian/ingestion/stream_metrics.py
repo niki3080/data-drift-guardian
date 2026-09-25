@@ -3,22 +3,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
-from drift_guardian.core.parse_config import read_config
+from drift_guardian.config_handler.parse_config import Config, read_config
 from drift_guardian.ingestion.event import KafkaEvent
 
 
-# ------------------------------------------------------------------ #
-# Контракт stream-quality
-# ------------------------------------------------------------------ #
 @dataclass(frozen=True, slots=True)
 class ThresholdPair:
-    """Пара warning/critical порогов для одной stream-метрики."""
+    """Пороговые значения warning/critical для одной stream-метрики."""
 
     warning: float
     critical: float
 
     def __post_init__(self) -> None:
+        """Проверяет корректность пары warning/critical."""
         if self.warning < 0 or self.critical < 0:
             raise ValueError("stream thresholds must be non-negative")
         if self.warning >= self.critical:
@@ -27,7 +26,7 @@ class ThresholdPair:
 
 @dataclass(frozen=True, slots=True)
 class StreamThresholds:
-    """Набор необязательных порогов качества realtime-потока."""
+    """Настроенные stream-метрики, которым разрешено влиять на общий status."""
 
     event_time_lag_seconds: ThresholdPair | None = None
     window_time_span_seconds: ThresholdPair | None = None
@@ -36,7 +35,7 @@ class StreamThresholds:
     late_event_rate: ThresholdPair | None = None
 
     def as_dict(self) -> dict[str, ThresholdPair]:
-        """Возвращает настроенные пороги с именами Prometheus-метрик."""
+        """Возвращает только stream-метрики с настроенными thresholds."""
         pairs = {
             "drift_event_time_lag_seconds": self.event_time_lag_seconds,
             "drift_window_time_span_seconds": self.window_time_span_seconds,
@@ -56,36 +55,42 @@ _STREAM_CONFIG_FIELDS = {
 }
 
 
-def load_stream_thresholds(path: str | Path) -> StreamThresholds:
-    """Читает stream_drift через общий parser Core.
+def _pair_from_any(raw: Any) -> ThresholdPair | None:
+    """Преобразует config threshold pair во внутреннюю структуру realtime."""
+    if raw is None:
+        return None
+    warning = getattr(raw, "warning", None)
+    critical = getattr(raw, "critical", None)
+    if warning is None or critical is None:
+        return None
+    return ThresholdPair(float(warning), float(critical))
 
-    В итоговый статус входят только перечисленные в ``stream_drift`` метрики.
-    Отсутствующая метрика продолжает экспортироваться, но не влияет на статус.
-    """
-    config_path = Path(path)
-    if not config_path.exists():
-        return StreamThresholds()
 
-    config = read_config(config_path)
+def stream_thresholds_from_config(config: Config) -> StreamThresholds:
+    """Извлекает stream thresholds из уже разобранного ``Config``."""
     stream_drift = config.stream_drift
     if stream_drift is None:
         return StreamThresholds()
 
     values: dict[str, ThresholdPair] = {}
     for metric_name, field_name in _STREAM_CONFIG_FIELDS.items():
-        raw_pair = getattr(stream_drift, metric_name)
-        if raw_pair is None:
-            continue
-        values[field_name] = ThresholdPair(
-            warning=float(raw_pair.warning),
-            critical=float(raw_pair.critical),
-        )
-
+        pair = _pair_from_any(getattr(stream_drift, metric_name, None))
+        if pair is not None:
+            values[field_name] = pair
     return StreamThresholds(**values)
+
+
+def load_stream_thresholds(path: str | Path) -> StreamThresholds:
+    """Загружает Config через единый parser и извлекает stream thresholds."""
+    config_path = Path(path)
+    if not config_path.exists():
+        return StreamThresholds()
+    return stream_thresholds_from_config(read_config(str(config_path)))
+
 
 @dataclass(frozen=True, slots=True)
 class StreamSnapshot:
-    """Снимок метрик stream-quality для экспорта в Prometheus."""
+    """Текущий снимок технического состояния потока для Prometheus."""
 
     status: int
     event_time_lag_seconds: float
@@ -97,21 +102,15 @@ class StreamSnapshot:
     out_of_order_events_total: int
 
 
-# ------------------------------------------------------------------ #
-# Расчёт stream-quality метрик
-# ------------------------------------------------------------------ #
 class StreamTracker:
-    """Считает технические метрики качества текущего окна.
-
-    Window-local invalid/late rates сбрасываются после успешного анализа.
-    Накопительные late/out-of-order counters сохраняются до остановки процесса.
-    """
+    """Накапливает stream-метрики и считает status только по настроенным порогам."""
 
     def __init__(
         self,
         late_event_threshold_seconds: float = 60.0,
         thresholds: StreamThresholds | None = None,
     ) -> None:
+        """Инициализирует window-local и lifetime состояние stream tracker."""
         if late_event_threshold_seconds < 0:
             raise ValueError("late_event_threshold_seconds must be non-negative")
 
@@ -128,7 +127,7 @@ class StreamTracker:
         self._latest_lag = 0.0
 
     def reset_window(self) -> None:
-        """Сбрасывает метрики, относящиеся только к текущему окну."""
+        """Сбрасывает только window-local состояние после успешного анализа."""
         self._window_observations = 0
         self._invalid_event_times = 0
         self._late_events_window = 0
@@ -139,7 +138,7 @@ class StreamTracker:
         self._invalid_event_times += 1
 
     def observe(self, event: KafkaEvent) -> None:
-        """Обновляет stream-quality счётчики по валидному событию."""
+        """Обновляет window-local и lifetime stream-метрики по событию."""
         event_time = event.event_time.astimezone(UTC)
         self._latest_lag = max(
             (datetime.now(UTC) - event_time).total_seconds(),
@@ -167,7 +166,7 @@ class StreamTracker:
         *,
         ready: bool,
     ) -> StreamSnapshot:
-        """Строит текущий снимок stream-quality и рассчитывает итоговый статус."""
+        """Возвращает согласованный снимок stream-health для exporter."""
         ordered_times = sorted(event_time.astimezone(UTC) for event_time in event_times)
         window_time_span = 0.0
         max_event_gap = 0.0
@@ -195,7 +194,6 @@ class StreamTracker:
         status = -1
         configured_thresholds = self.thresholds.as_dict()
         if ready and configured_thresholds:
-            statuses = [0]
             values = {
                 "drift_event_time_lag_seconds": self._latest_lag,
                 "drift_window_time_span_seconds": max(window_time_span, 0.0),
@@ -203,9 +201,13 @@ class StreamTracker:
                 "drift_invalid_event_time_rate": invalid_rate,
                 "drift_late_event_rate": late_rate,
             }
-            for metric, pair in configured_thresholds.items():
-                statuses.append(self._status(values[metric], pair))
-            status = max(statuses)
+            status = max(
+                [0]
+                + [
+                    self._status(values[metric], pair)
+                    for metric, pair in configured_thresholds.items()
+                ]
+            )
 
         return StreamSnapshot(
             status=status,
@@ -220,12 +222,12 @@ class StreamTracker:
 
     @staticmethod
     def _rate(count: int, total: int) -> float:
-        if total == 0:
-            return 0.0
-        return count / total
+        """Возвращает долю, безопасно обрабатывая пустой denominator."""
+        return 0.0 if total == 0 else count / total
 
     @staticmethod
     def _status(value: float, thresholds: ThresholdPair) -> int:
+        """Кодирует stream status как 0=ok, 1=warning, 2=critical."""
         if value >= thresholds.critical:
             return 2
         if value >= thresholds.warning:

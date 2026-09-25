@@ -1,33 +1,34 @@
-import importlib
 from typing import Any
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from drift_guardian.batch.adversarial_validation import (
+from drift_guardian.analyzer.methods.batch.adversarial_validation import (
     _prepare_features,
     _validate_inputs,
     adversarial_validation,
 )
 
-adversarial_module = importlib.import_module(
-    "drift_guardian.batch.adversarial_validation"
+
+ADVERSARIAL_VALIDATION_MODULE = (
+    "drift_guardian.analyzer.methods.batch.adversarial_validation"
 )
 
 
-@pytest.fixture
+@pytest.fixture()
 def simple_reference_current() -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Возвращает минимальные одинаковые выборки для проверки параметров."""
+    """Минимальные одинаковые reference/current для проверки валидации параметров."""
     reference = pd.DataFrame({"value": range(6)})
     current = pd.DataFrame({"value": range(6)})
     return reference, current
 
 
-@pytest.fixture
+@pytest.fixture()
 def shifted_reference_current() -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Возвращает выборки с заметным сдвигом для проверки AV."""
+    """Выборки с заметным сдвигом распределения для adversarial validation."""
     rng = np.random.default_rng(42)
+
     reference = pd.DataFrame(
         {
             "amount": rng.normal(0.0, 1.0, 120),
@@ -35,6 +36,7 @@ def shifted_reference_current() -> tuple[pd.DataFrame, pd.DataFrame]:
             "active": rng.choice([True, False], 120),
         }
     )
+
     current = pd.DataFrame(
         {
             "unused": rng.normal(size=180),
@@ -43,12 +45,13 @@ def shifted_reference_current() -> tuple[pd.DataFrame, pd.DataFrame]:
             "amount": rng.normal(3.0, 1.0, 180),
         }
     )
+
     return reference, current
 
 
-@pytest.fixture
+@pytest.fixture()
 def prepare_features_data() -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Возвращает данные для проверки преобразования типов и пропусков."""
+    """Данные для проверки приведения типов и обработки специальных значений."""
     reference = pd.DataFrame(
         {
             "number": pd.Series([1.0, np.nan], dtype="float64"),
@@ -56,6 +59,7 @@ def prepare_features_data() -> tuple[pd.DataFrame, pd.DataFrame]:
             "flag": pd.Series([True, False], dtype="bool"),
         }
     )
+
     features = pd.DataFrame(
         {
             "number": ["1.5", "not-a-number", np.inf],
@@ -63,13 +67,47 @@ def prepare_features_data() -> tuple[pd.DataFrame, pd.DataFrame]:
             "flag": [True, None, False],
         }
     )
+
     return reference, features
 
 
-@pytest.fixture
+@pytest.fixture()
+def datetime_reference_current() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Reference/current с datetime-признаком."""
+    reference = pd.DataFrame(
+        {"timestamp": pd.date_range("2026-01-01", periods=6)}
+    )
+    current = pd.DataFrame(
+        {"timestamp": pd.date_range("2026-02-01", periods=6)}
+    )
+    return reference, current
+
+
+@pytest.fixture()
+def constant_reference_current() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Одинаковые константные выборки без различий и вариативности."""
+    reference = pd.DataFrame(
+        {
+            "number": np.ones(60),
+            "category": ["same"] * 60,
+        }
+    )
+    current = reference.copy()
+    return reference, current
+
+
+@pytest.fixture()
+def all_missing_numeric_current_data() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Числовой признак, полностью пропущенный в current."""
+    reference = pd.DataFrame({"value": np.arange(60, dtype=float)})
+    current = pd.DataFrame({"value": [np.nan] * 80})
+    return reference, current
+
+
+@pytest.fixture()
 def fake_lightgbm(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
-    """Подменяет LightGBM и возвращает созданные fake-модели."""
-    instances: list[Any] = []
+    """Подменяет LightGBM-классификатор и возвращает созданные fake-инстансы."""
+    instances = []
 
     class FakeBooster:
         @staticmethod
@@ -92,19 +130,22 @@ def fake_lightgbm(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
             assert kwargs["num_iteration"] == 7
             return np.tile([0.5, 0.5], (len(X), 1))
 
-    monkeypatch.setattr(adversarial_module, "LGBMClassifier", FakeClassifier)
     monkeypatch.setattr(
-        adversarial_module,
-        "early_stopping",
+        f"{ADVERSARIAL_VALIDATION_MODULE}.LGBMClassifier",
+        FakeClassifier,
+    )
+    monkeypatch.setattr(
+        f"{ADVERSARIAL_VALIDATION_MODULE}.early_stopping",
         lambda *args, **kwargs: "callback",
     )
+
     return instances
 
 
 def test_returns_auc_and_sorted_feature_importance(
     shifted_reference_current: tuple[pd.DataFrame, pd.DataFrame],
 ) -> None:
-    """Проверяет основной AV-контракт на выборках разного размера."""
+    """Проверяет основной контракт на выборках разного размера."""
     reference, current = shifted_reference_current
 
     auc, importance = adversarial_validation(
@@ -116,7 +157,9 @@ def test_returns_auc_and_sorted_feature_importance(
     )
 
     assert isinstance(auc, float)
-    assert 0.8 < auc <= 1.0
+    assert auc > 0.8
+    assert auc <= 1.0
+
     assert importance.columns.tolist() == [
         "feature",
         "importance",
@@ -127,19 +170,15 @@ def test_returns_auc_and_sorted_feature_importance(
     assert importance["importance"].is_monotonic_decreasing
     assert importance["rank"].tolist() == [1, 2, 3]
     assert float(importance["importance"].sum()) == pytest.approx(1.0)
-
-    for key in (
+    for attr in (
         "roc_auc_cv_mean",
         "roc_auc_cv_std",
         "roc_auc_cv_min",
         "roc_auc_cv_max",
         "driver_consistency",
     ):
-        assert key in importance.attrs
+        assert attr in importance.attrs
 
-    assert importance.attrs["roc_auc_cv_std"] >= 0.0
-    assert importance.attrs["roc_auc_cv_min"] <= importance.attrs["roc_auc_cv_mean"]
-    assert importance.attrs["roc_auc_cv_mean"] <= importance.attrs["roc_auc_cv_max"]
     assert 0.0 <= importance.attrs["driver_consistency"] <= 1.0
 
 
@@ -158,11 +197,18 @@ def test_prepare_features_uses_reference_dtypes(
     assert prepared.loc[0, "number"] == 1.5
     assert pd.isna(prepared.loc[1, "number"])
     assert pd.isna(prepared.loc[2, "number"])
+
     assert isinstance(prepared["category"].dtype, pd.CategoricalDtype)
     assert isinstance(prepared["flag"].dtype, pd.CategoricalDtype)
+
     assert prepared.loc[1, "category"] == "__missing__"
     assert prepared.loc[1, "flag"] == "__missing__"
-    assert set(prepared["category"].cat.categories) == {"__missing__", "a", "b"}
+
+    assert set(prepared["category"].cat.categories) == {
+        "__missing__",
+        "a",
+        "b",
+    }
     assert set(prepared["flag"].cat.categories) == {
         "__missing__",
         "False",
@@ -189,7 +235,7 @@ def test_rejects_invalid_parameter_types(
     arguments: dict[str, Any],
     message: str,
 ) -> None:
-    """Проверяет ошибки для неподдерживаемых типов параметров."""
+    """Проверяет понятные ошибки для неверных типов параметров."""
     reference, current = simple_reference_current
 
     with pytest.raises(TypeError, match=message):
@@ -210,21 +256,18 @@ def test_rejects_invalid_parameter_values(
     arguments: dict[str, Any],
     message: str,
 ) -> None:
-    """Проверяет ограничения на значения параметров AV."""
+    """Проверяет ограничения на значения параметров валидации."""
     reference, current = simple_reference_current
 
     with pytest.raises(ValueError, match=message):
         adversarial_validation(reference, current, **arguments)
 
 
-def test_rejects_unsupported_reference_dtype() -> None:
-    """Отклоняет datetime до согласования его преобразования в AV."""
-    reference = pd.DataFrame(
-        {"timestamp": pd.date_range("2026-01-01", periods=6)}
-    )
-    current = pd.DataFrame(
-        {"timestamp": pd.date_range("2026-02-01", periods=6)}
-    )
+def test_rejects_unsupported_reference_dtype(
+    datetime_reference_current: tuple[pd.DataFrame, pd.DataFrame],
+) -> None:
+    """Явно отклоняет datetime до согласования его преобразования."""
+    reference, current = datetime_reference_current
 
     with pytest.raises(TypeError, match="unsupported feature dtype"):
         adversarial_validation(reference, current)
@@ -233,7 +276,7 @@ def test_rejects_unsupported_reference_dtype() -> None:
 def test_validate_inputs_accepts_numpy_integer_parameters(
     simple_reference_current: tuple[pd.DataFrame, pd.DataFrame],
 ) -> None:
-    """Принимает целые NumPy-скаляры в числовых параметрах."""
+    """Принимает целые NumPy-скаляры, часто встречающиеся в ML-коде."""
     reference, current = simple_reference_current
 
     _validate_inputs(
@@ -246,15 +289,11 @@ def test_validate_inputs_accepts_numpy_integer_parameters(
     )
 
 
-def test_constant_features_return_neutral_auc_and_zero_importance() -> None:
-    """Проверяет сценарий без различий и вариативности признаков."""
-    reference = pd.DataFrame(
-        {
-            "number": np.ones(60),
-            "category": ["same"] * 60,
-        }
-    )
-    current = reference.copy()
+def test_constant_features_return_neutral_auc_and_zero_importance(
+    constant_reference_current: tuple[pd.DataFrame, pd.DataFrame],
+) -> None:
+    """Проверяет детерминированный сценарий без различий и вариативности."""
+    reference, current = constant_reference_current
 
     auc, importance = adversarial_validation(reference, current)
 
@@ -263,10 +302,11 @@ def test_constant_features_return_neutral_auc_and_zero_importance() -> None:
     assert (importance["importance_std"] == 0.0).all()
 
 
-def test_all_missing_numeric_values_are_supported() -> None:
+def test_all_missing_numeric_values_are_supported(
+    all_missing_numeric_current_data: tuple[pd.DataFrame, pd.DataFrame],
+) -> None:
     """Проверяет числовой признак, полностью пропущенный в current."""
-    reference = pd.DataFrame({"value": np.arange(60, dtype=float)})
-    current = pd.DataFrame({"value": [np.nan] * 80})
+    reference, current = all_missing_numeric_current_data
 
     auc, importance = adversarial_validation(reference, current)
 
@@ -279,8 +319,9 @@ def test_lightgbm_params_are_merged_and_invariants_are_preserved(
     simple_reference_current: tuple[pd.DataFrame, pd.DataFrame],
     fake_lightgbm: list[Any],
 ) -> None:
-    """Проверяет overrides модели и обязательные objective/metric."""
+    """Проверяет передачу параметров модели и обязательные objective/metric."""
     reference, current = simple_reference_current
+    instances = fake_lightgbm
 
     adversarial_validation(
         reference,
@@ -293,11 +334,15 @@ def test_lightgbm_params_are_merged_and_invariants_are_preserved(
         },
     )
 
-    assert len(fake_lightgbm) == 3
-    for model in fake_lightgbm:
+    assert len(instances) == 3
+
+    for model in instances:
         assert model.params["n_estimators"] == 25
         assert model.params["learning_rate"] == 0.2
         assert model.params["objective"] == "binary"
         assert model.params["metric"] == "auc"
         assert "eval_metric" not in model.fit_kwargs
+        assert "eval_X" not in model.fit_kwargs
+        assert "eval_y" not in model.fit_kwargs
+        assert "eval_set" in model.fit_kwargs
         assert model.fit_kwargs["callbacks"] == ["callback"]

@@ -39,6 +39,7 @@ disable_created_metrics()
 # Преобразование значений drift-report
 # ------------------------------------------------------------------ #
 def _status_number(value: Any, default: int = -1) -> int:
+    """Преобразует текстовый или числовой status в Prometheus-код."""
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         return int(value)
     if value is None:
@@ -47,6 +48,7 @@ def _status_number(value: Any, default: int = -1) -> int:
 
 
 def _finite_float(value: Any) -> float | None:
+    """Возвращает конечное float-значение либо None."""
     if isinstance(value, bool):
         return None
     try:
@@ -57,6 +59,7 @@ def _finite_float(value: Any) -> float | None:
 
 
 def _parse_timestamp_seconds(value: Any) -> float | None:
+    """Преобразует Unix/ISO-8601 timestamp в секунды Unix epoch."""
     numeric = _finite_float(value)
     if numeric is not None and not isinstance(value, str):
         return numeric
@@ -72,6 +75,7 @@ def _parse_timestamp_seconds(value: Any) -> float | None:
 
 
 def _alert_status(metric: str, alerts: Iterable[str]) -> str | None:
+    """Восстанавливает status legacy-метрики по списку alerts."""
     alerts_set = {str(alert) for alert in alerts}
     if f"{metric}_critical" in alerts_set:
         return "critical"
@@ -94,6 +98,7 @@ class PrometheusExporter:
     """
 
     def __init__(self, registry: CollectorRegistry | None = None) -> None:
+        """Создаёт изолированный набор Prometheus collectors и state streaks."""
         self.registry = registry or CollectorRegistry()
         # Dashboard использует process_start_time_seconds для uptime exporter.
         ProcessCollector(registry=self.registry)
@@ -105,7 +110,7 @@ class PrometheusExporter:
         )
         self.active_alerts = Gauge(
             "drift_active_alerts",
-            "Number of active drift alerts reported by the analyzer",
+            "Number of features with critical drift status reported by Core",
             registry=self.registry,
         )
         self.window_size = Gauge(
@@ -161,6 +166,30 @@ class PrometheusExporter:
             "drift_threshold",
             "Configured warning and critical drift thresholds",
             ["metric", "level"],
+            registry=self.registry,
+        )
+        self.resolved_threshold = Gauge(
+            "drift_resolved_threshold",
+            "Resolved feature-level threshold after local overrides",
+            ["feature", "type", "metric", "level"],
+            registry=self.registry,
+        )
+        self.overall_status_streak = Gauge(
+            "drift_overall_status_streak",
+            "Consecutive analysis windows with the same overall warning/critical status",
+            ["status"],
+            registry=self.registry,
+        )
+        self.status_feature_streak = Gauge(
+            "drift_status_feature_streak",
+            "Consecutive analysis windows with the same feature warning/critical status",
+            ["feature", "type", "status"],
+            registry=self.registry,
+        )
+        self.metric_status_streak = Gauge(
+            "drift_status_streak",
+            "Consecutive analysis windows with the same metric warning/critical status",
+            ["feature", "type", "metric", "status"],
             registry=self.registry,
         )
 
@@ -225,6 +254,12 @@ class PrometheusExporter:
         self.av_status = Gauge(
             "drift_av_status",
             "Adversarial validation status: -1=not configured, 0=ok, 1=warning, 2=critical",
+            registry=self.registry,
+        )
+        self.av_status_streak = Gauge(
+            "drift_av_status_streak",
+            "Consecutive analysis windows with the same AV warning/critical status",
+            ["status"],
             registry=self.registry,
         )
         self.av_available = Gauge(
@@ -351,10 +386,18 @@ class PrometheusExporter:
         self.av_current_rows.set(0)
         self.av_features_evaluated.set(0)
         self.av_sample_fraction.clear()
+        for status_name in ("warning", "critical"):
+            self.overall_status_streak.labels(status=status_name).set(0)
+            self.av_status_streak.labels(status=status_name).set(0)
 
         self._last_analysis_monotonic: float | None = None
         self._last_late_events = 0
         self._last_out_of_order_events = 0
+        self._overall_streak_state: tuple[int, int] = (-1, 0)
+        self._feature_streak_state: dict[tuple[str, str], tuple[int, int]] = {}
+        self._metric_streak_state: dict[tuple[str, str, str], tuple[int, int]] = {}
+        self._av_streak_state: tuple[int, int] = (-1, 0)
+        self._previous_av_importance: dict[str, float] | None = None
 
     def start_http_server(self, port: int) -> tuple[Any, Any]:
         """Запускает HTTP endpoint Prometheus для текущего реестра."""
@@ -405,6 +448,29 @@ class PrometheusExporter:
         if sample_size is not None:
             self.reference_sample_size.set(sample_size)
 
+    def update_drift_thresholds(self, config: Any) -> None:
+        """Публикует глобальные Core thresholds, не затирая local override."""
+        self.threshold.clear()
+        raw_thresholds = getattr(config, "thresholds", None)
+        if isinstance(raw_thresholds, dict):
+            for metric, pair in raw_thresholds.items():
+                metric_name = getattr(metric, "value", str(metric))
+                for level in ("warning", "critical"):
+                    value = _finite_float(getattr(pair, level, None))
+                    if value is not None:
+                        self.threshold.labels(metric=metric_name, level=level).set(value)
+
+        prediction = getattr(config, "prediction_metrics", None)
+        resolved = getattr(prediction, "resolved_thresholds", None)
+        if getattr(prediction, "enabled", False) and isinstance(resolved, dict):
+            for metric, pair in resolved.items():
+                raw_name = getattr(metric, "value", str(metric))
+                metric_name = PREDICTION_METRIC_ALIASES.get(raw_name, raw_name)
+                for level in ("warning", "critical"):
+                    value = _finite_float(getattr(pair, level, None))
+                    if value is not None:
+                        self.threshold.labels(metric=metric_name, level=level).set(value)
+
     def update_stream_thresholds(self, thresholds: Any) -> None:
         """Обновляет stream-quality thresholds в Prometheus."""
         self.stream_threshold.clear()
@@ -441,11 +507,13 @@ class PrometheusExporter:
         self._last_out_of_order_events = snapshot.out_of_order_events_total
 
     def update_report(self, report: dict[str, Any]) -> None:
-        """Преобразует drift-report в согласованный контракт Prometheus."""
+        """Экспортирует Core drift-report без повторного расчёта статусов."""
         self._clear_dynamic_report_series()
 
-        self.overall_status.set(_status_number(report.get("overall_status"), -1))
+        overall_status = _status_number(report.get("overall_status"), -1)
+        self.overall_status.set(overall_status)
         self.active_alerts.set(_finite_float(report.get("active_alerts")) or 0)
+        self._update_overall_streak(overall_status)
 
         report_window_size = _finite_float(report.get("window_size"))
         if report_window_size is not None and report_window_size > 0:
@@ -455,44 +523,45 @@ class PrometheusExporter:
         if timestamp is not None:
             self.report_timestamp.set(timestamp)
 
-        thresholds: dict[str, dict[str, float]] = {}
+        # Legacy/mock report может содержать thresholds на верхнем уровне.
         top_level_thresholds = report.get("thresholds")
         if isinstance(top_level_thresholds, dict):
             for metric, pair in top_level_thresholds.items():
-                parsed = self._parse_threshold_pair(pair)
-                if parsed:
-                    thresholds[str(metric)] = parsed
+                for level, value in self._parse_threshold_pair(pair).items():
+                    self.threshold.labels(metric=str(metric), level=level).set(value)
+
+        present_features: set[tuple[str, str]] = set()
+        present_metrics: set[tuple[str, str, str]] = set()
 
         features = report.get("features")
         if isinstance(features, dict):
             for feature, block in features.items():
                 if isinstance(block, dict):
-                    self._export_feature(
+                    feature_key, metric_keys = self._export_feature(
                         feature=str(feature),
                         block=block,
-                        thresholds=thresholds,
                         prediction=False,
                     )
+                    present_features.add(feature_key)
+                    present_metrics.update(metric_keys)
 
         prediction = report.get("prediction")
         if isinstance(prediction, dict):
-            self._export_feature(
+            feature_key, metric_keys = self._export_feature(
                 feature="prediction",
                 block=prediction,
-                thresholds=thresholds,
                 prediction=True,
             )
+            present_features.add(feature_key)
+            present_metrics.update(metric_keys)
 
-        self.update_adversarial_validation(report.get("adversarial_validation"))
+        self._drop_missing_streak_state(present_features, present_metrics)
 
-        for metric, pair in thresholds.items():
-            for level in ("warning", "critical"):
-                value = pair.get(level)
-                if value is not None:
-                    self.threshold.labels(metric=metric, level=level).set(value)
+        if "adversarial_validation" in report:
+            self.update_adversarial_validation(report.get("adversarial_validation"))
 
     def update_adversarial_validation(self, block: Any) -> None:
-        """Экспортирует необязательный результат adversarial validation."""
+        """Экспортирует optional monitoring-блок, полученный из Core AV."""
         self.av_feature_importance.clear()
         self.av_threshold.clear()
         self.av_status.set(-1)
@@ -515,34 +584,28 @@ class PrometheusExporter:
         self.av_sample_fraction.clear()
 
         if not isinstance(block, dict):
+            self._update_av_streak(-1)
             return
 
         self.av_available.set(1)
-        self.av_status.set(_status_number(block.get("status"), -1))
-
-        roc_auc = _finite_float(block.get("roc_auc"))
-        if roc_auc is not None:
-            self.av_roc_auc.set(roc_auc)
-
-        roc_auc_cv_std = _finite_float(block.get("roc_auc_cv_std"))
-        if roc_auc_cv_std is not None:
-            self.av_roc_auc_cv_std.set(roc_auc_cv_std)
+        av_status = _status_number(block.get("status"), -1)
+        self.av_status.set(av_status)
+        self._update_av_streak(av_status)
 
         for key, gauge in (
+            ("roc_auc", self.av_roc_auc),
+            ("roc_auc_cv_std", self.av_roc_auc_cv_std),
             ("roc_auc_cv_mean", self.av_roc_auc_cv_mean),
             ("roc_auc_cv_min", self.av_roc_auc_cv_min),
             ("roc_auc_cv_max", self.av_roc_auc_cv_max),
             ("driver_consistency", self.av_driver_consistency),
             ("driver_similarity_previous", self.av_driver_similarity_previous),
             ("top1_importance_share", self.av_top1_importance_share),
+            ("top3_importance_share", self.av_top3_importance_share),
         ):
             value = _finite_float(block.get(key))
             if value is not None:
                 gauge.set(value)
-
-        top3_importance_share = _finite_float(block.get("top3_importance_share"))
-        if top3_importance_share is not None:
-            self.av_top3_importance_share.set(top3_importance_share)
 
         timestamp = _parse_timestamp_seconds(block.get("timestamp"))
         if timestamp is not None:
@@ -550,10 +613,9 @@ class PrometheusExporter:
             self.av_last_run_timestamp.set(timestamp)
 
         reference_rows = _finite_float(block.get("reference_rows"))
+        current_rows = _finite_float(block.get("current_rows"))
         if reference_rows is not None:
             self.av_reference_rows.set(reference_rows)
-
-        current_rows = _finite_float(block.get("current_rows"))
         if current_rows is not None:
             self.av_current_rows.set(current_rows)
 
@@ -599,7 +661,6 @@ class PrometheusExporter:
         raw_importance = block.get("feature_importance")
         if not isinstance(raw_importance, list):
             return
-
         for item in raw_importance:
             if not isinstance(item, dict):
                 continue
@@ -613,14 +674,129 @@ class PrometheusExporter:
                 rank=str(int(rank)),
             ).set(importance)
 
+    def update_adversarial_validation_result(
+        self,
+        roc_auc: float,
+        importance: Any,
+        *,
+        timestamp: Any,
+        thresholds: Any,
+        reference_rows: int,
+        current_rows: int,
+        top_features: int = 10,
+    ) -> None:
+        """Преобразует публичный результат Core AV в monitoring-метрики.
+
+        Core API возвращает общий ROC AUC и feature importance. Fold-level AUC
+        экспортируются только при наличии соответствующих значений в
+        ``importance.attrs``; realtime-слой не вычисляет их повторно.
+        """
+        warning = _finite_float(getattr(thresholds, "warning", None))
+        critical = _finite_float(getattr(thresholds, "critical", None))
+        status = -1
+        if warning is not None and critical is not None:
+            if roc_auc >= critical:
+                status = 2
+            elif roc_auc >= warning:
+                status = 1
+            else:
+                status = 0
+
+        rows: list[dict[str, Any]] = []
+        if hasattr(importance, "head") and hasattr(importance, "to_dict"):
+            required = {"feature", "importance", "rank"}
+            columns = set(getattr(importance, "columns", []))
+            if required.issubset(columns):
+                rows = (
+                    importance.head(top_features)
+                    .loc[:, ["feature", "importance", "rank"]]
+                    .to_dict(orient="records")
+                )
+
+        current_importance: dict[str, float] = {}
+        if hasattr(importance, "iterrows"):
+            for _, row in importance.iterrows():
+                feature = row.get("feature")
+                value = _finite_float(row.get("importance"))
+                if feature is not None and value is not None:
+                    current_importance[str(feature)] = value
+
+        driver_similarity_previous = None
+        if self._previous_av_importance and current_importance:
+            names = set(self._previous_av_importance) | set(current_importance)
+            dot = sum(
+                self._previous_av_importance.get(name, 0.0)
+                * current_importance.get(name, 0.0)
+                for name in names
+            )
+            previous_norm = math.sqrt(
+                sum(self._previous_av_importance.get(name, 0.0) ** 2 for name in names)
+            )
+            current_norm = math.sqrt(
+                sum(current_importance.get(name, 0.0) ** 2 for name in names)
+            )
+            if previous_norm and current_norm:
+                driver_similarity_previous = dot / (previous_norm * current_norm)
+        self._previous_av_importance = current_importance
+
+        top1 = sum(
+            current_importance.get(str(row.get("feature")), 0.0) for row in rows[:1]
+        )
+        top3 = sum(
+            current_importance.get(str(row.get("feature")), 0.0) for row in rows[:3]
+        )
+        dataset_size = min(reference_rows, current_rows)
+
+        block: dict[str, Any] = {
+            "timestamp": timestamp,
+            "status": status,
+            "roc_auc": roc_auc,
+            "reference_rows": reference_rows,
+            "current_rows": current_rows,
+            "dataset_size": dataset_size,
+            "features_evaluated": len(current_importance),
+            "reference_sample_fraction": (
+                dataset_size / reference_rows if reference_rows else 0.0
+            ),
+            "current_sample_fraction": (
+                dataset_size / current_rows if current_rows else 0.0
+            ),
+            "top1_importance_share": top1,
+            "top3_importance_share": top3,
+            "feature_importance": rows,
+        }
+        if warning is not None and critical is not None:
+            block["thresholds"] = {"warning": warning, "critical": critical}
+
+        attrs = getattr(importance, "attrs", {})
+        if isinstance(attrs, dict):
+            for name in (
+                "roc_auc_cv_mean",
+                "roc_auc_cv_std",
+                "roc_auc_cv_min",
+                "roc_auc_cv_max",
+                "driver_consistency",
+            ):
+                value = _finite_float(attrs.get(name))
+                if value is not None:
+                    block[name] = value
+        if driver_similarity_previous is not None:
+            block["driver_similarity_previous"] = driver_similarity_previous
+
+        self.update_adversarial_validation(block)
+
     def _clear_dynamic_report_series(self) -> None:
+        """Очищает label-серии, полностью заменяемые новым Core-report."""
         self.status_feature.clear()
         self.metric_value.clear()
         self.metric_status.clear()
-        self.threshold.clear()
+        self.resolved_threshold.clear()
+        self.status_feature_streak.clear()
+        self.metric_status_streak.clear()
 
     @staticmethod
     def _parse_threshold_pair(pair: Any) -> dict[str, float]:
+        """Извлекает конечные warning/critical значения из metric payload."""
         if not isinstance(pair, dict):
             return {}
         result: dict[str, float] = {}
@@ -630,14 +806,108 @@ class PrometheusExporter:
                 result[level] = value
         return result
 
+    @staticmethod
+    def _next_streak(
+        previous: tuple[int, int] | None,
+        current_status: int,
+    ) -> tuple[int, int]:
+        """Обновляет длину серии одинаковых warning/critical состояний."""
+        if current_status not in (1, 2):
+            return current_status, 0
+        if previous is not None and previous[0] == current_status:
+            return current_status, previous[1] + 1
+        return current_status, 1
+
+    def _set_streak_labels(
+        self,
+        gauge: Gauge,
+        labels: dict[str, str],
+        state: tuple[int, int],
+    ) -> None:
+        """Публикует warning/critical streak в отдельные label-серии."""
+        current_status, count = state
+        for status_number, status_name in ((1, "warning"), (2, "critical")):
+            gauge.labels(**labels, status=status_name).set(
+                count if current_status == status_number else 0
+            )
+
+    def _update_overall_streak(self, current_status: int) -> None:
+        """Обновляет streak общего drift status."""
+        self._overall_streak_state = self._next_streak(
+            self._overall_streak_state,
+            current_status,
+        )
+        self._set_streak_labels(
+            self.overall_status_streak,
+            {},
+            self._overall_streak_state,
+        )
+
+    def _update_av_streak(self, current_status: int) -> None:
+        """Обновляет streak adversarial-validation status."""
+        self._av_streak_state = self._next_streak(
+            self._av_streak_state,
+            current_status,
+        )
+        self._set_streak_labels(
+            self.av_status_streak,
+            {},
+            self._av_streak_state,
+        )
+
+    def _update_feature_streak(
+        self,
+        key: tuple[str, str],
+        current_status: int,
+    ) -> None:
+        """Обновляет streak для одной feature."""
+        state = self._next_streak(self._feature_streak_state.get(key), current_status)
+        self._feature_streak_state[key] = state
+        self._set_streak_labels(
+            self.status_feature_streak,
+            {"feature": key[0], "type": key[1]},
+            state,
+        )
+
+    def _update_metric_streak(
+        self,
+        key: tuple[str, str, str],
+        current_status: int,
+    ) -> None:
+        """Обновляет streak для одной feature metric."""
+        state = self._next_streak(self._metric_streak_state.get(key), current_status)
+        self._metric_streak_state[key] = state
+        self._set_streak_labels(
+            self.metric_status_streak,
+            {"feature": key[0], "type": key[1], "metric": key[2]},
+            state,
+        )
+
+    def _drop_missing_streak_state(
+        self,
+        present_features: set[tuple[str, str]],
+        present_metrics: set[tuple[str, str, str]],
+    ) -> None:
+        """Удаляет streak state для label-серий, исчезнувших из нового report."""
+        self._feature_streak_state = {
+            key: value
+            for key, value in self._feature_streak_state.items()
+            if key in present_features
+        }
+        self._metric_streak_state = {
+            key: value
+            for key, value in self._metric_streak_state.items()
+            if key in present_metrics
+        }
+
     def _export_feature(
         self,
         *,
         feature: str,
         block: dict[str, Any],
-        thresholds: dict[str, dict[str, float]],
         prediction: bool,
-    ) -> None:
+    ) -> tuple[tuple[str, str], set[tuple[str, str, str]]]:
+        """Экспортирует feature/prediction block без пересчёта Core status."""
         feature_type = str(
             block.get("type") or ("numeric" if prediction else "unknown")
         )
@@ -653,7 +923,7 @@ class PrometheusExporter:
             metrics = {}
 
         metric_status_numbers: list[int] = []
-
+        metric_keys: set[tuple[str, str, str]] = set()
         for raw_metric, payload in metrics.items():
             raw_metric = str(raw_metric)
             metric = (
@@ -661,28 +931,19 @@ class PrometheusExporter:
                 if prediction
                 else raw_metric
             )
-            if prediction and metric == "prediction_psi":
-                source = thresholds.get(raw_metric) or thresholds.get("psi")
-                if source and metric not in thresholds:
-                    thresholds[metric] = dict(source)
 
             value: float | None
             metric_status: str | int | None = None
-            nested_thresholds: dict[str, float] = {}
-
+            resolved_thresholds: dict[str, float] = {}
             if isinstance(payload, dict):
                 value = _finite_float(payload.get("value"))
                 metric_status = payload.get("status")
-                nested_thresholds = self._parse_threshold_pair(payload)
+                resolved_thresholds = self._parse_threshold_pair(payload)
             else:
                 value = _finite_float(payload)
 
             if value is None:
                 continue
-
-            if nested_thresholds and metric not in thresholds:
-                thresholds[metric] = dict(nested_thresholds)
-
             if metric_status is None:
                 metric_status = _alert_status(raw_metric, alerts)
             status_number = _status_number(metric_status, 0)
@@ -695,14 +956,26 @@ class PrometheusExporter:
             }
             self.metric_value.labels(**metric_labels).set(value)
             self.metric_status.labels(**metric_labels).set(status_number)
+            for level, threshold_value in resolved_thresholds.items():
+                self.resolved_threshold.labels(
+                    **metric_labels,
+                    level=level,
+                ).set(threshold_value)
+
+            metric_key = (feature, feature_type, metric)
+            metric_keys.add(metric_key)
+            self._update_metric_streak(metric_key, status_number)
 
         declared_status = block.get("status")
-        if declared_status is None:
-            feature_status = max(metric_status_numbers, default=0)
-        else:
-            feature_status = _status_number(declared_status, 0)
-
+        feature_status = (
+            max(metric_status_numbers, default=0)
+            if declared_status is None
+            else _status_number(declared_status, 0)
+        )
         self.status_feature.labels(
             feature=feature,
             type=feature_type,
         ).set(feature_status)
+        feature_key = (feature, feature_type)
+        self._update_feature_streak(feature_key, feature_status)
+        return feature_key, metric_keys

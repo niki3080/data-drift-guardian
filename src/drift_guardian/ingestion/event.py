@@ -43,16 +43,6 @@ class KafkaEvent:
             if isinstance(value, float) and not math.isfinite(value):
                 raise ValueError(f"feature {name!r} must be finite")
 
-        prediction_score = features.get("prediction_score")
-        if prediction_score is not None:
-            if isinstance(prediction_score, bool) or not isinstance(
-                prediction_score,
-                (int, float),
-            ):
-                raise ValueError("prediction_score must be numeric")
-            if not 0 <= float(prediction_score) <= 1:
-                raise ValueError("prediction_score must be in [0, 1]")
-
         return cls(
             event_id=event_id,
             event_time=event_time,
@@ -61,6 +51,7 @@ class KafkaEvent:
 
     @staticmethod
     def _parse_event_time(value: Any) -> datetime:
+        """Разбирает timezone-aware ISO-8601 event_time."""
         if not isinstance(value, str):
             raise InvalidEventTime("event_time must be an ISO-8601 string")
 

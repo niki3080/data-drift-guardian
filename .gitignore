@@ -26,3 +26,9 @@ htmlcov/
 # Сгенерированные отчёты и резервные копии
 /reports/*.html
 /monitoring/grafana/backup/
+
+
+config/config.experiment.yaml
+monitoring/grafana/alerting-export/
+reports/mock_drift_report backup.json
+yulia_notes/
