@@ -12,7 +12,7 @@ import pandas as pd
 
 from drift_guardian.analyzer.offline.offline_mode import OfflineWrapper
 from drift_guardian.config_handler.parse_config import Config
-from drift_guardian.ingestion.demo_reference import write_demo_reference
+# from tools.demo_reference import write_demo_reference
 
 logger = logging.getLogger(__name__)
 
@@ -169,12 +169,12 @@ def build_runtime_from_env(window_size: int) -> RuntimeContext:
         raise ValueError("window_size must be positive")
 
     reference_path = Path(
-        os.getenv("REFERENCE_DATA_PATH", "/app/data/demo_reference.csv")
+        os.getenv("REFERENCE_DATA_PATH", "/app/data/reference.csv")
     )
-    if not reference_path.exists() and _env_flag("GENERATE_DEMO_REFERENCE", True):
-        rows = int(os.getenv("DEMO_REFERENCE_ROWS", "10000"))
-        seed = int(os.getenv("DEMO_REFERENCE_SEED", "42"))
-        write_demo_reference(reference_path, rows=rows, seed=seed)
+#    if not reference_path.exists() and _env_flag("GENERATE_DEMO_REFERENCE", True):
+#        rows = int(os.getenv("DEMO_REFERENCE_ROWS", "10000"))
+#        seed = int(os.getenv("DEMO_REFERENCE_SEED", "42"))
+#        write_demo_reference(reference_path, rows=rows, seed=seed)
 
     # Parser конфигурации находится внутри пакета drift_guardian.
     # Пользовательский YAML монтируется в Docker по пути /app/config/config.yaml.
