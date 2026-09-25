@@ -1,20 +1,46 @@
 [project]
 name = "drift-guardian"
 version = "0.1.0"
-description = "Add your description here"
+description = "Data drift monitoring for batch and realtime pipelines"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "confluent-kafka>=2.15.0",
+    "lightgbm>=4.5.0",
+    "numpy>=2.1.0",
+    "pandas>=2.3.3",
+    "prometheus-client>=0.26.0",
+    "pyarrow>=25.0.1",
+    "pydantic>=2.13.0",
+    "pyyaml>=6.0.2",
+    "scikit-learn>=1.6.0",
+]
+
+[project.scripts]
+drift-guardian-report = "drift_guardian.reporting.offline_report:main"
+
+[build-system]
+requires = ["uv_build>=0.11.0,<0.12"]
+build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
     "ipykernel>=7.3.0",
+    "pytest>=9.1.1",
+    "rich>=15.0.0",
 ]
 notebooks = [
     "evidently>=0.7.21",
     "great-expectations>=1.20.0",
     "nannyml>=0.13.1",
     "nbformat>=4.2.0",
-    "pandas>=2.3.3",
-    "pyarrow>=25.0.1",
 ]
+
+[tool.isort]
+profile = "black"
+known_first_party = ["drift_guardian"]
+src_paths = ["src", "tests", "monitoring"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
