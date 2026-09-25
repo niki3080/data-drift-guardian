@@ -147,6 +147,7 @@ def build_runtime(
     core = OfflineWrapper(
         reference_df=reference_df,
         path_to_config=str(config_path),
+        take_sample=True
     )
 
     return RuntimeContext(
