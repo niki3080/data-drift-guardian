@@ -5,8 +5,8 @@
     "name": "ad42z5h",
     "namespace": "default",
     "uid": "f5002961-df1f-48ba-8efc-7ff0ea27a5d0",
-    "resourceVersion": "1790368417553986",
-    "generation": 6,
+    "resourceVersion": "1790413040625004",
+    "generation": 15,
     "creationTimestamp": "2026-09-25T20:28:14Z",
     "labels": {
       "grafana.app/deprecatedInternalID": "401341284184064"
@@ -17,11 +17,11 @@
       "grafana.app/managerAllowsEdits": "true",
       "grafana.app/managerId": "drift-guardian",
       "grafana.app/saved-from-ui": "Grafana v13.2.1 (56cd3e9288)",
-      "grafana.app/sourceChecksum": "fb5cb93332e4bc3ac6e1d65589de3f75",
+      "grafana.app/sourceChecksum": "f77f01b40176c6de11b3ddd1681f6042",
       "grafana.app/sourcePath": "/var/lib/grafana/dashboards/drift_guardian.json",
-      "grafana.app/sourceTimestamp": "1790319615000",
+      "grafana.app/sourceTimestamp": "1790368688000",
       "grafana.app/updatedBy": "user:cfz59yo0ws9oga",
-      "grafana.app/updatedTimestamp": "2026-09-25T20:33:37Z"
+      "grafana.app/updatedTimestamp": "2026-09-26T08:57:20Z"
     }
   },
   "spec": {
@@ -1454,7 +1454,7 @@
                         "color": {
                           "fixed": "#ccccdb80"
                         },
-                        "size": 14,
+                        "size": 12,
                         "text": {
                           "field": "roc_auc_threshold_warning",
                           "fixed": "",
@@ -1473,7 +1473,7 @@
                         "height": 22,
                         "left": 50,
                         "rotation": 0,
-                        "top": 110,
+                        "top": 107,
                         "width": 30
                       },
                       "type": "metric-value"
@@ -1510,7 +1510,8 @@
                       "placement": {
                         "height": 22,
                         "left": 38,
-                        "top": 110,
+                        "rotation": 0,
+                        "top": 107,
                         "width": 15
                       },
                       "type": "text"
@@ -1606,7 +1607,7 @@
                         "color": {
                           "fixed": "#ccccdb80"
                         },
-                        "size": 14,
+                        "size": 12,
                         "text": {
                           "field": "roc_auc_threshold_critical",
                           "fixed": "",
@@ -1625,7 +1626,7 @@
                         "height": 22,
                         "left": 109,
                         "rotation": 0,
-                        "top": 110,
+                        "top": 107,
                         "width": 62
                       },
                       "type": "metric-value"
@@ -1662,7 +1663,8 @@
                       "placement": {
                         "height": 22,
                         "left": 97,
-                        "top": 110,
+                        "rotation": 0,
+                        "top": 107,
                         "width": 15
                       },
                       "type": "text"
@@ -5541,6 +5543,21 @@
                       {
                         "id": "unit",
                         "value": "time:DD MMM YYYY HH:mm:ss"
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "result": {
+                                "index": 0,
+                                "text": "Report is not ready"
+                              },
+                              "to": 0
+                            },
+                            "type": "range"
+                          }
+                        ]
                       }
                     ]
                   }
@@ -7558,7 +7575,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "max without(feature, type, metric, instance, job) (\n  label_join(\n    label_join(\n      (\n        label_replace(\n          drift_status{feature!=\"prediction\"} == 1,\n          \"alert\", \"${1} warning\", \"metric\", \"(.+)\"\n        )\n        or\n        label_replace(\n          drift_status{feature!=\"prediction\"} == 2,\n          \"alert\", \"${1} critical\", \"metric\", \"(.+)\"\n        )\n        or\n        label_replace(\n          topk by (feature) (\n            1,\n            drift_metric_value{feature!=\"prediction\"}\n            and on(feature)\n            (\n              drift_status_feature{feature!=\"prediction\"} == 0\n            )\n          ),\n          \"alert\", \"No alerts\", \"\", \"\"\n        )\n      )\n      and on(feature)\n      (\n        drift_status_feature{feature!=\"prediction\"}\n        ${analysis_status_filter:raw}\n      ),\n      \"join_key\", \"\", \"feature\"\n    ),\n    \"join_key\", \"::\", \"join_key\", \"metric\"\n  )\n)",
+                        "expr": "max without(feature, type, metric, instance, job) (\n\n  # итоговый join_key: сначала feature, затем feature::metric\n  label_join(\n    label_join(\n      (\n\n        # Настоящие warning-алерты.\n        label_replace(\n          drift_status{feature!=\"prediction\"} == 1,\n          \"alert\", \"${1} warning\", \"metric\", \"(.+)\"\n        )\n\n        or\n\n        # Настоящие critical-алерты.\n        label_replace(\n          drift_status{feature!=\"prediction\"} == 2,\n          \"alert\", \"${1} critical\", \"metric\", \"(.+)\"\n        )\n\n        or\n\n        # Fallback для feature без алертов\n        label_replace(\n          topk by (feature) (\n            1,\n\n            drift_metric_value{feature!=\"prediction\"}\n\n            # Удаляем feature из fallback, если есть метрика с алертами\n            unless on(feature)\n            (\n              drift_status{feature!=\"prediction\"} == 1\n              or\n              drift_status{feature!=\"prediction\"} == 2\n            )\n          ),\n          \"alert\", \"No alerts\", \"\", \"\"\n        )\n      )\n\n      # Фильтр features\n      and on(feature)\n      (\n        drift_status_feature{feature!=\"prediction\"}\n        ${analysis_status_filter:raw}\n      ),\n\n      # Первый этап: join_key=\"<feature>\".\n      \"join_key\", \"\", \"feature\"\n    ),\n\n    # Второй этап: join_key=\"<feature>::<metric>\".\n    \"join_key\", \"::\", \"join_key\", \"metric\"\n  )\n)",
                         "format": "table",
                         "instant": true,
                         "legendFormat": "__auto",
@@ -7814,12 +7831,7 @@
                   "left": 0
                 },
                 "showHeader": true,
-                "sortBy": [
-                  {
-                    "desc": true,
-                    "displayName": "⚠"
-                  }
-                ]
+                "sortBy": []
               },
               "fieldConfig": {
                 "defaults": {
@@ -8948,12 +8960,13 @@
                         "value": [
                           {
                             "options": {
-                              "-1": {
+                              "result": {
                                 "index": 0,
                                 "text": "Report is not ready"
-                              }
+                              },
+                              "to": 0
                             },
-                            "type": "value"
+                            "type": "range"
                           }
                         ]
                       }
@@ -11620,7 +11633,7 @@
                         "color": {
                           "fixed": "#ccccdb80"
                         },
-                        "size": 14,
+                        "size": 12,
                         "text": {
                           "field": "metric_threshold_warning",
                           "fixed": "",
@@ -11637,10 +11650,10 @@
                       "name": "Metric warning threshold",
                       "placement": {
                         "height": 22,
-                        "left": 50,
+                        "left": 45,
                         "rotation": 0,
-                        "top": 110,
-                        "width": 30
+                        "top": 107,
+                        "width": 55
                       },
                       "type": "metric-value"
                     },
@@ -11675,8 +11688,9 @@
                       "name": "Bullet warning threshold",
                       "placement": {
                         "height": 22,
-                        "left": 38,
-                        "top": 110,
+                        "left": 33,
+                        "rotation": 0,
+                        "top": 107,
                         "width": 15
                       },
                       "type": "text"
@@ -11772,7 +11786,7 @@
                         "color": {
                           "fixed": "#ccccdb80"
                         },
-                        "size": 14,
+                        "size": 12,
                         "text": {
                           "field": "metric_threshold_critical",
                           "fixed": "",
@@ -11791,7 +11805,7 @@
                         "height": 22,
                         "left": 109,
                         "rotation": 0,
-                        "top": 110,
+                        "top": 107,
                         "width": 62
                       },
                       "type": "metric-value"
@@ -11828,7 +11842,8 @@
                       "placement": {
                         "height": 22,
                         "left": 97,
-                        "top": 110,
+                        "rotation": 0,
+                        "top": 107,
                         "width": 15
                       },
                       "type": "text"
@@ -11944,6 +11959,10 @@
                       {
                         "id": "decimals",
                         "value": 2
+                      },
+                      {
+                        "id": "unit",
+                        "value": "short"
                       }
                     ]
                   },
@@ -13940,7 +13959,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "drift_av_status or vector(-999)",
+                        "expr": "max(drift_av_status) or vector(-999)",
                         "format": "time_series",
                         "instant": true,
                         "legendFormat": "av_status",
@@ -13964,7 +13983,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "drift_av_status or vector(-1)",
+                        "expr": "max(drift_av_status) or vector(-1)",
                         "format": "time_series",
                         "instant": true,
                         "legendFormat": "av_status_details",
@@ -13988,7 +14007,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "(drift_av_last_run_timestamp_seconds * 1000) or vector(-1)",
+                        "expr": "max(drift_av_last_run_timestamp_seconds * 1000) or vector(-1)",
                         "format": "time_series",
                         "instant": true,
                         "legendFormat": "av_last_run",
@@ -14371,12 +14390,13 @@
                         "value": [
                           {
                             "options": {
-                              "-1": {
+                              "result": {
                                 "index": 0,
                                 "text": "AV is not ready"
-                              }
+                              },
+                              "to": 0
                             },
-                            "type": "value"
+                            "type": "range"
                           }
                         ]
                       }
@@ -16326,7 +16346,7 @@
             "kind": "RowsLayoutRow",
             "spec": {
               "title": "Feature Metrics Over Time",
-              "collapse": false,
+              "collapse": true,
               "hideHeader": false,
               "layout": {
                 "kind": "RowsLayout",
@@ -16759,21 +16779,6 @@
                                   "repeat": {
                                     "mode": "variable",
                                     "value": "prediction_metric"
-                                  },
-                                  "conditionalRendering": {
-                                    "kind": "ConditionalRenderingGroup",
-                                    "spec": {
-                                      "visibility": "hide",
-                                      "condition": "and",
-                                      "items": [
-                                        {
-                                          "kind": "ConditionalRenderingData",
-                                          "spec": {
-                                            "value": false
-                                          }
-                                        }
-                                      ]
-                                    }
                                   }
                                 }
                               }
