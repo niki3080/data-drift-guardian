@@ -100,22 +100,28 @@ h3 {
 
 .summary-card {
     display: flex;
-    min-width: 170px;
-    max-width: 190px;
-    min-height: 94px;
-    flex: 1 1 180px;
+    height: 70px;
     flex-direction: column;
-    padding: 6px 6px;
+    padding: 6px 10px;
     border: 1px solid var(--surface);
     border-radius: 8px;
     background: var(--surface);
     color: var(--text);
 }
 
-.summary-card-overall { flex: 1 1 180px; padding: 6px 12px;}
+/* Colored report-status cards. */
+.summary-card-overall {
+    width: 240px;
+    min-width: 200px;
+    max-width: 240px;
+    flex: 1 1 160px;
+}
 .summary-card-overall .summary-label { padding: 4px 0 3px;}
+
+/* White metric cards. */
 .summary-card-alert {
     min-width: 100px;
+    max-width: 150px;
     flex: 1 1 100px;
     align-items: center;
     text-align: center;
@@ -127,10 +133,10 @@ h3 {
     text-wrap: balance;
     white-space: pre-line;
 }
-.summary-card-alert .summary-details {color: var(--muted);}
+.summary-card-alert .summary-details {color: var(--muted); font-size: 10px;}
 .summary-label { font-size: 14px;}
 .summary-value { padding: 2px 0 2px; font-size: 28px; line-height: 1; }
-.summary-details { min-height: 14px; font-size: 12px; }
+.summary-details { min-height: 20px; font-size: 12px;  }
 .status-passed { border-color: var(--passed-border); background: var(--passed-background); color: var(--passed-text); }
 .status-warning { border-color: var(--warning-border); background: var(--warning-background); color: var(--warning-text); }
 .status-critical { border-color: var(--critical-border); background: var(--critical-background); color: var(--critical-text); }
@@ -183,11 +189,16 @@ thead th { color: #6f6f79; font-size: 13px; font-weight: 650; white-space: nowra
     display: flex;
     min-height: 12px;
     gap: 8px;
-    margin-top: 0px;
     color: var(--muted);
     font-size: 10px;
     white-space: nowrap;
 }
+
+/* Threshold positioning inside white metric cards. */
+.metric-thresholds-card { margin-top: 3px; }
+
+/* Threshold positioning inside feature-table cells. */
+.metric-thresholds-table { margin-top: 0px; padding-top:0px;}
 
 .threshold { display: inline-flex; align-items: center; gap: 4px; }
 .threshold-marker { display: inline-block; width: 1.5px; height: 8px; }

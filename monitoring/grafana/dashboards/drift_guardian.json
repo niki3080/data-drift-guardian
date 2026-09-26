@@ -4,23 +4,24 @@
   "metadata": {
     "name": "ad42z5h",
     "namespace": "default",
-    "uid": "0145e8fe-4260-4b7a-91f7-bdf475a5f20c",
-    "resourceVersion": "1790413939837990",
-    "generation": 2,
-    "creationTimestamp": "2026-09-26T08:59:35Z",
+    "uid": "dd6f6c22-cbf5-46df-b997-640391b41bdf",
+    "resourceVersion": "1790453616661003",
+    "generation": 10,
+    "creationTimestamp": "2026-09-26T09:20:01Z",
     "labels": {
-      "grafana.app/deprecatedInternalID": "556736275378176"
+      "grafana.app/deprecatedInternalID": "561878559191040"
     },
     "annotations": {
       "grafana.app/createdBy": "access-policy:service",
       "grafana.app/managedBy": "classic-file-provisioning",
       "grafana.app/managerAllowsEdits": "true",
       "grafana.app/managerId": "drift-guardian",
-      "grafana.app/sourceChecksum": "b8e1d5e824d546d2ce357ffc07c1c37c",
-      "grafana.app/sourcePath": "/var/lib/grafana/dashboards/Data Drift Guardian v2.3-1790413900890.json",
-      "grafana.app/sourceTimestamp": "1790413900000",
+      "grafana.app/saved-from-ui": "Grafana v13.2.1 (56cd3e9288)",
+      "grafana.app/sourceChecksum": "2920efab778139f95d1e2dfeee1f1165",
+      "grafana.app/sourcePath": "/var/lib/grafana/dashboards/drift_guardian.json",
+      "grafana.app/sourceTimestamp": "1790413953000",
       "grafana.app/updatedBy": "user:cfz59yo0ws9oga",
-      "grafana.app/updatedTimestamp": "2026-09-26T09:10:52Z"
+      "grafana.app/updatedTimestamp": "2026-09-26T20:13:36Z"
     }
   },
   "spec": {
@@ -299,7 +300,7 @@
                         "color": {
                           "fixed": "#ccccdb80"
                         },
-                        "size": 14,
+                        "size": 13,
                         "text": {
                           "fixed": "Reference rows"
                         },
@@ -379,7 +380,7 @@
                         "color": {
                           "fixed": "#ccccdb80"
                         },
-                        "size": 14,
+                        "size": 13,
                         "text": {
                           "fixed": "Current rows"
                         },
@@ -459,7 +460,7 @@
                         "color": {
                           "fixed": "#ccccdb80"
                         },
-                        "size": 14,
+                        "size": 13,
                         "text": {
                           "fixed": "AV sample / class"
                         },
@@ -539,7 +540,7 @@
                         "color": {
                           "fixed": "#ccccdb80"
                         },
-                        "size": 14,
+                        "size": 13,
                         "text": {
                           "fixed": "Features analyzed"
                         },
@@ -619,7 +620,7 @@
                         "color": {
                           "fixed": "#ccccdb80"
                         },
-                        "size": 14,
+                        "size": 13,
                         "text": {
                           "fixed": "Reference coverage"
                         },
@@ -699,7 +700,7 @@
                         "color": {
                           "fixed": "#ccccdb80"
                         },
-                        "size": 14,
+                        "size": 13,
                         "text": {
                           "fixed": "Current coverage"
                         },
@@ -779,7 +780,7 @@
                         "color": {
                           "fixed": "#ccccdb80"
                         },
-                        "size": 14,
+                        "size": 13,
                         "text": {
                           "fixed": "Warning AUC Threshold"
                         },
@@ -860,7 +861,7 @@
                         "color": {
                           "fixed": "#ccccdb80"
                         },
-                        "size": 14,
+                        "size": 13,
                         "text": {
                           "fixed": "Critical AUC Threshold"
                         },
@@ -1774,7 +1775,7 @@
                     "properties": [
                       {
                         "id": "decimals",
-                        "value": 2
+                        "value": 3
                       }
                     ]
                   },
@@ -11220,6 +11221,7 @@
             "spec": {
               "options": {
                 "cellHeight": "sm",
+                "enablePagination": true,
                 "showHeader": true,
                 "sortBy": [
                   {
@@ -11276,7 +11278,7 @@
                               },
                               "chi2": {
                                 "index": 9,
-                                "text": "Chi-Squared Test (χ²)"
+                                "text": "Chi-Squared Test (χ²) p-value"
                               },
                               "cramer_v": {
                                 "index": 4,
@@ -11321,7 +11323,7 @@
                       },
                       {
                         "id": "custom.width",
-                        "value": 210
+                        "value": 220
                       },
                       {
                         "id": "filterable"
@@ -11337,7 +11339,7 @@
                     "properties": [
                       {
                         "id": "decimals",
-                        "value": 2
+                        "value": 3
                       },
                       {
                         "id": "custom.width",
@@ -11346,6 +11348,10 @@
                       {
                         "id": "custom.align",
                         "value": "center"
+                      },
+                      {
+                        "id": "unit",
+                        "value": "short"
                       }
                     ]
                   },
@@ -11358,7 +11364,7 @@
                     "properties": [
                       {
                         "id": "decimals",
-                        "value": 2
+                        "value": 3
                       },
                       {
                         "id": "custom.width",
@@ -11367,6 +11373,10 @@
                       {
                         "id": "custom.align",
                         "value": "center"
+                      },
+                      {
+                        "id": "unit",
+                        "value": "short"
                       }
                     ]
                   }
@@ -11957,7 +11967,7 @@
                     "properties": [
                       {
                         "id": "decimals",
-                        "value": 2
+                        "value": 3
                       },
                       {
                         "id": "unit",
@@ -11987,7 +11997,7 @@
                               },
                               "chi2": {
                                 "index": 2,
-                                "text": "Chi-Squared Test (χ²)"
+                                "text": "χ² Test p-value"
                               },
                               "cramer_v": {
                                 "index": 10,
@@ -12235,6 +12245,32 @@
                       {
                         "id": "displayName",
                         "value": "Wasserstein"
+                      }
+                    ]
+                  },
+                  {
+                    "__systemRef": "hideSeriesFrom",
+                    "matcher": {
+                      "id": "byNames",
+                      "options": {
+                        "mode": "exclude",
+                        "names": [
+                          "JS divergence",
+                          "KS test",
+                          "PSI"
+                        ],
+                        "prefix": "All except:",
+                        "readOnly": true
+                      }
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.hideFrom",
+                        "value": {
+                          "legend": false,
+                          "tooltip": true,
+                          "viz": true
+                        }
                       }
                     ]
                   }
@@ -12502,6 +12538,33 @@
                       {
                         "id": "displayName",
                         "value": "KS test"
+                      }
+                    ]
+                  },
+                  {
+                    "__systemRef": "hideSeriesFrom",
+                    "matcher": {
+                      "id": "byNames",
+                      "options": {
+                        "mode": "exclude",
+                        "names": [
+                          "JS divergence",
+                          "KS test",
+                          "Missing rate",
+                          "PSI"
+                        ],
+                        "prefix": "All except:",
+                        "readOnly": true
+                      }
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.hideFrom",
+                        "value": {
+                          "legend": false,
+                          "tooltip": true,
+                          "viz": true
+                        }
                       }
                     ]
                   }
@@ -13073,8 +13136,8 @@
                 "showHeader": true,
                 "sortBy": [
                   {
-                    "desc": false,
-                    "displayName": "Status"
+                    "desc": true,
+                    "displayName": "⚠"
                   }
                 ]
               },
@@ -13295,7 +13358,7 @@
                       },
                       {
                         "id": "custom.width",
-                        "value": 60
+                        "value": 65
                       }
                     ]
                   },
@@ -13308,7 +13371,7 @@
                     "properties": [
                       {
                         "id": "custom.width",
-                        "value": 85
+                        "value": 83
                       }
                     ]
                   },
@@ -13321,7 +13384,7 @@
                     "properties": [
                       {
                         "id": "custom.width",
-                        "value": 90
+                        "value": 88
                       }
                     ]
                   },
@@ -13334,7 +13397,7 @@
                     "properties": [
                       {
                         "id": "custom.width",
-                        "value": 60
+                        "value": 55
                       }
                     ]
                   },
@@ -13386,7 +13449,15 @@
                     "properties": [
                       {
                         "id": "custom.width",
-                        "value": 20
+                        "value": 85
+                      },
+                      {
+                        "id": "decimals",
+                        "value": 3
+                      },
+                      {
+                        "id": "displayName",
+                        "value": "χ² p-value"
                       }
                     ]
                   },
@@ -13399,7 +13470,7 @@
                     "properties": [
                       {
                         "id": "custom.width",
-                        "value": 100
+                        "value": 85
                       },
                       {
                         "id": "decimals",
@@ -14483,7 +14554,7 @@
             "spec": {
               "options": {
                 "cellHeight": "sm",
-                "enablePagination": false,
+                "enablePagination": true,
                 "frameIndex": 0,
                 "frozenColumns": {
                   "left": 0
@@ -15144,7 +15215,7 @@
                               "-1": {
                                 "color": "#ccccdb4d",
                                 "index": 0,
-                                "text": "waiting next AV"
+                                "text": "–"
                               }
                             },
                             "type": "value"
@@ -15659,7 +15730,7 @@
                                 "spec": {
                                   "x": 0,
                                   "y": 0,
-                                  "width": 9,
+                                  "width": 10,
                                   "height": 5,
                                   "element": {
                                     "kind": "ElementReference",
@@ -15670,7 +15741,7 @@
                               {
                                 "kind": "GridLayoutItem",
                                 "spec": {
-                                  "x": 9,
+                                  "x": 10,
                                   "y": 0,
                                   "width": 9,
                                   "height": 5,
@@ -16345,7 +16416,7 @@
             "kind": "RowsLayoutRow",
             "spec": {
               "title": "Feature Metrics Over Time",
-              "collapse": true,
+              "collapse": false,
               "hideHeader": false,
               "layout": {
                 "kind": "RowsLayout",
@@ -16790,7 +16861,7 @@
                       "kind": "RowsLayoutRow",
                       "spec": {
                         "title": "Drift Over Time",
-                        "collapse": true,
+                        "collapse": false,
                         "hideHeader": false,
                         "layout": {
                           "kind": "AutoGridLayout",

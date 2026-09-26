@@ -36,6 +36,13 @@ AV_DETAILS = {
     "unknown": "Adversarial validation status is unavailable",
 }
 
+PREDICTION_DETAILS = {
+    "passed": "No prediction drift detected",
+    "warning": "Prediction drift warning detected",
+    "critical": "Prediction drift detected",
+    "unknown": "Prediction drift status is unavailable",
+}
+
 
 def _status(value: Any) -> str:
     """Normalize engine statuses to statuses supported by the report UI."""
@@ -72,7 +79,7 @@ def _metric_label(name: str) -> str:
         "unseen_category_rate": "Unseen rate",
         "wasserstein": "Wasserstein",
         "wasserstein_distance": "Wasserstein",
-        "chi2": "χ²-test",
+        "chi2": "χ² p-value",
         "cramer_v": "Cramér's V",
     }
     return labels.get(name, name.replace("_", " ").capitalize())
@@ -88,9 +95,13 @@ def _summary_card(
 ) -> str:
     """Render one status/metric card."""
     status_class = f" status-{_status(status)}" if status else ""
+    label_html = (
+        "" if variant == "overall" else f'<span class="summary-label">{escape(label)}</span>'
+    )
     return f"""
-        <article class="summary-card summary-card-{escape(variant)}{status_class}">
-            <span class="summary-label">{escape(label)}</span>
+        <article class="summary-card summary-card-{escape(variant)}{status_class}"
+                 aria-label="{escape(label)}">
+            {label_html}
             <strong class="summary-value">{_display(value)}</strong>
             <span class="summary-details">{escape(details)}</span>
         </article>
@@ -109,7 +120,7 @@ def _roc_auc_card(value: Any, status: str) -> str:
         <article class="summary-card summary-card-alert">
             <span class="summary-label">ROC AUC</span>
             <strong class="summary-value status-text-{status}">{_display(value)}</strong>
-            <div class="metric-thresholds">{thresholds}</div>
+            <div class="metric-thresholds metric-thresholds-card">{thresholds}</div>
         </article>
     """
 
@@ -135,8 +146,6 @@ def _metric_cell(metric: Any) -> str:
     if metric is None:
         return '<span class="muted">—</span>'
 
-    # Older saved reports contain only a scalar metric value. They have no
-    # per-metric status or thresholds to colour, but remain renderable.
     if not isinstance(metric, Mapping):
         return f'<div class="metric-value">{_display(metric)}</div>'
 
@@ -151,7 +160,32 @@ def _metric_cell(metric: Any) -> str:
         <div class="metric-value status-text-{status}">
             {_display(metric.get("value"))}
         </div>
-        <div class="metric-thresholds">{thresholds}</div>
+        <div class="metric-thresholds metric-thresholds-table">{thresholds}</div>
+    """
+
+
+def _metric_summary_card(name: str, metric: Any) -> str:
+    """Render one metric as a large summary card."""
+    if isinstance(metric, Mapping):
+        status = _status(metric.get("status"))
+        value = metric.get("value")
+        thresholds = "".join(
+            [
+                _threshold(metric.get("warning"), "warning"),
+                _threshold(metric.get("critical"), "critical"),
+            ]
+        )
+    else:
+        status = "unknown"
+        value = metric
+        thresholds = ""
+
+    return f"""
+        <article class="summary-card summary-card-alert">
+            <span class="summary-label">{escape(_metric_label(name))}</span>
+            <strong class="summary-value status-text-{status}">{_display(value)}</strong>
+            <div class="metric-thresholds metric-thresholds-card">{thresholds}</div>
+        </article>
     """
 
 
@@ -384,10 +418,30 @@ def render_report_html(
 
     prediction_html = ""
     if isinstance(prediction, Mapping) and prediction:
+        prediction_status = _status(prediction.get("status"))
+        prediction_metrics = prediction.get("metrics", {})
+        metric_cards = ""
+        if isinstance(prediction_metrics, Mapping):
+            metric_cards = "".join(
+                _metric_summary_card(str(name), metric)
+                for name, metric in prediction_metrics.items()
+            )
+        prediction_cards = "".join(
+            [
+                _summary_card(
+                    "Prediction drift",
+                    STATUS_LABELS[prediction_status],
+                    status=prediction_status,
+                    details=PREDICTION_DETAILS[prediction_status],
+                    variant="overall",
+                ),
+                metric_cards,
+            ]
+        )
         prediction_html = f"""
         <section class="report-section" aria-labelledby="prediction-title">
             <h2 id="prediction-title">Prediction Drift</h2>
-            {_feature_table("", {"prediction": prediction})}
+            <div class="card-grid">{prediction_cards}</div>
         </section>
         """
 
@@ -504,7 +558,7 @@ def main() -> None:
 
     output_path = generate_html_report(
         args.report,
-        args.output,
+        output_path=args.output,
         dataset_name=args.dataset_name,
     )
     print(f"Report written to {output_path}")
