@@ -239,19 +239,26 @@ def run(runtime: RuntimeContext) -> None:
                 continue
 
             current_df = window.to_dataframe()
-            report, adversarial_result = analyze_current_dataframe(runtime, current_df)
-            _export_completed_analysis(
-                exporter,
-                runtime,
-                report,
-                adversarial_result,
-                adversarial_executed=runtime._av_executed_last_analysis,
-                current_rows=len(current_df),
-            )
-            exporter.record_analysis_run()
-            completed_analyses += 1
+            try:
+                report, adversarial_result = analyze_current_dataframe(runtime, current_df)
+                _export_completed_analysis(
+                    exporter,
+                    runtime,
+                    report,
+                    adversarial_result,
+                    adversarial_executed=runtime._av_executed_last_analysis,
+                    current_rows=len(current_df),
+                )
+                exporter.record_analysis_run()
+                completed_analyses += 1
+            except Exception:
+                LOGGER.exception(
+                    "analysis failed window_size=%s — window dropped",
+                    len(current_df),
+                )
 
-            # Offset подтверждается только после успешных Core-анализа и экспорта.
+            # Offset подтверждается после попытки анализа: упавшее окно
+            # теряется, но consumer продолжает со следующего.
             consumer.commit(asynchronous=False)
             window.clear()
             exporter.set_current_window_events(0)
