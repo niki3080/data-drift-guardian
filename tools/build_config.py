@@ -284,7 +284,9 @@ OPTIONS = ConfigBuildOptions(
     # Пороги для потоковых метрик — пишутся в конфиг как есть.
     # None = блок не добавляется в YAML.
     # Пример: {"drift_score": {"warning": 0.1, "critical": 0.2}}
-    stream_drift=None,
+    stream_drift={'drift_event_time_lag_seconds': {"warning": 30, "critical": 120},
+                  'drift_late_event_rate': {'warning': 0.01, 'critical': 0.05}
+                  },
 
     # ------------------------------------------------------------------------
     #  7. ADVERSARIAL VALIDATION
