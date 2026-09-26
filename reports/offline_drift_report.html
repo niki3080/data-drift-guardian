@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Offline drift demo — Data Drift Guardian</title>
+    <style>
+/* Responsive offline report styles, aligned with the customer churn notebook. */
+:root {
+    color-scheme: light;
+    --background: #f7f7f8;
+    --surface: #ffffff;
+    --surface-soft: #fafafa;
+    --border: #dddddd;
+    --border-soft: #eeeeee;
+    --text: #222222;
+    --muted: #828282;
+    --passed: #1e8846;
+    --passed-background: #f8fdf9;
+    --passed-border: #6fa784;
+    --passed-text: #14532d;
+    --warning: #ff8a00;
+    --warning-background: #fffdf5;
+    --warning-border: #cdb559;
+    --warning-text: #713f12;
+    --critical: #ef3f5d;
+    --critical-background: #fef5f5;
+    --critical-border: #cd7b7b;
+    --critical-text: #7f1d1d;
+    --unknown: #92929d;
+    --unknown-background: #f4f4f4;
+    --unknown-border: #dddddd;
+    --unknown-text: #333333;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--background);
+    color: var(--text);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.45;
+}
+
+.report-container {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: clamp(18px, 3vw, 42px);
+}
+
+.report-header { margin-bottom: 24px; }
+h1, h2, h3 { margin-top: 0; }
+
+.report-header {
+    margin-bottom: 12px;
+}
+
+.report-header + .report-section {
+    margin-top: 16px;
+}
+
+h1 {
+    margin-bottom: 12px;
+    font-size: clamp(28px, 4vw, 42px);
+    line-height: 1.15;
+}
+
+h2 { margin-bottom: 16px; font-size: 22px; }
+h3 {
+    margin-bottom: 12px;
+    color: #42424b;
+    font-size: 14px;
+    text-transform: lowercase;
+}
+
+.report-context {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 24px;
+    color: #555555;
+    font-size: 13px;
+}
+
+.monitoring-features {
+    margin-top: 10px;
+    padding: 10px 14px;
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    background: var(--surface-soft);
+    color: #555555;
+    font-size: 13px;
+}
+
+.feature-list { margin: 6px 0 0 18px; padding: 0; }
+
+.report-section {
+    margin: 16px 0;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+}
+
+.card-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+
+.summary-card {
+    display: flex;
+    min-width: 170px;
+    max-width: 190px;
+    min-height: 94px;
+    flex: 1 1 180px;
+    flex-direction: column;
+    padding: 6px 6px;
+    border: 1px solid var(--surface);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+}
+
+.summary-card-overall { flex: 1 1 180px; padding: 6px 12px;}
+.summary-card-overall .summary-label { padding: 4px 0 3px;}
+.summary-card-alert {
+    min-width: 100px;
+    flex: 1 1 100px;
+    align-items: center;
+    text-align: center;
+}
+.summary-card-alert .summary-label {
+    max-width: 150px;
+    font-size: 12px;
+    line-height: 1.2;
+    text-wrap: balance;
+    white-space: pre-line;
+}
+.summary-card-alert .summary-details {color: var(--muted);}
+.summary-label { font-size: 14px;}
+.summary-value { padding: 2px 0 2px; font-size: 28px; line-height: 1; }
+.summary-details { min-height: 14px; font-size: 12px; }
+.status-passed { border-color: var(--passed-border); background: var(--passed-background); color: var(--passed-text); }
+.status-warning { border-color: var(--warning-border); background: var(--warning-background); color: var(--warning-text); }
+.status-critical { border-color: var(--critical-border); background: var(--critical-background); color: var(--critical-text); }
+.status-unknown { border-color: var(--unknown-border); background: var(--unknown-background); color: var(--unknown-text); }
+
+.feature-group { margin-top: 28px; }
+.feature-group:first-of-type { margin-top: 8px; }
+.table-wrapper { width: 100%; overflow-x: auto; }
+
+table {
+    width: 100%;
+    min-width: max-content;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+th, td {
+    min-width: 90px;
+    padding: 6px 8px;
+    border-right: 1px solid var(--border-soft);
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+th:last-child, td:last-child { border-right: 0; }
+thead th { color: #6f6f79; font-size: 13px; font-weight: 650; white-space: nowrap; }
+.status-column { width: 60px; min-width: 60px; text-align: center; }
+.feature-name { min-width: 180px; font-weight: 650; }
+
+.status-dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; }
+.status-dot-passed { background: var(--passed); }
+.status-dot-warning { background: var(--warning); }
+.status-dot-critical { background: var(--critical); }
+.status-dot-unknown { background: var(--unknown); }
+
+.metric-value {
+    display: flex;
+    align-items: center;
+    font-size: 17px;
+    font-weight: 550;
+    white-space: nowrap;
+}
+
+.status-text-passed { color: var(--passed); }
+.status-text-warning { color: var(--warning); }
+.status-text-critical { color: var(--critical); }
+.status-text-unknown { color: var(--unknown); }
+
+.metric-thresholds {
+    display: flex;
+    min-height: 12px;
+    gap: 8px;
+    margin-top: 0px;
+    color: var(--muted);
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.threshold { display: inline-flex; align-items: center; gap: 4px; }
+.threshold-marker { display: inline-block; width: 1.5px; height: 8px; }
+.threshold-warning .threshold-marker { background: var(--warning); }
+.threshold-critical .threshold-marker { background: var(--critical); }
+
+.feature-importance-table { width: auto; }
+.feature-importance-table th,
+.feature-importance-table td {
+    min-width: 70px;
+    padding: 3px 6px;
+    font-size: 12px;
+}
+.muted { color: var(--muted); }
+
+@media (max-width: 720px) {
+    .report-container { padding: 14px; }
+    .report-section { padding: 14px; }
+    .summary-card { min-width: min(100%, 150px); }
+}
+
+    </style>
+</head>
+<body>
+    <main class="report-container">
+        <header class="report-header">
+            <h1>Offline drift demo</h1>
+            <div class="report-context">
+                <span>Report timestamp: <b>2026-09-26T16:05:22Z</b></span>
+                <span>Window size: <b>2,000</b></span>
+            </div>
+            <div class="monitoring-features">
+                <b>Monitored features:</b>
+                <ul class="feature-list"><li><b>numeric:</b> age, income</li><li><b>categorical:</b> country</li></ul>
+            </div>
+        </header>
+
+        <section class="report-section" aria-labelledby="input-drift-title">
+            <h2 id="input-drift-title">Input Data Drift</h2>
+            <div class="card-grid">
+        <article class="summary-card summary-card-overall status-critical">
+            <span class="summary-label">Overall status</span>
+            <strong class="summary-value">CRITICAL</strong>
+            <span class="summary-details">Input data drift detected</span>
+        </article>
+    
+        <article class="summary-card summary-card-alert">
+            <span class="summary-label">Critical 
+features</span>
+            <strong class="summary-value">1</strong>
+            <span class="summary-details">of 3 evaluated</span>
+        </article>
+    
+        <article class="summary-card summary-card-alert">
+            <span class="summary-label">Warning 
+features</span>
+            <strong class="summary-value">1</strong>
+            <span class="summary-details">of 3 evaluated</span>
+        </article>
+    
+        <article class="summary-card summary-card-alert">
+            <span class="summary-label">Warning 
+metric alerts</span>
+            <strong class="summary-value">1</strong>
+            <span class="summary-details"></span>
+        </article>
+    
+        <article class="summary-card summary-card-alert">
+            <span class="summary-label">Critical 
+metric alerts</span>
+            <strong class="summary-value">6</strong>
+            <span class="summary-details"></span>
+        </article>
+    </div>
+        </section>
+
+        <section class="report-section" aria-labelledby="feature-drift-title">
+            <h2 id="feature-drift-title">Feature-level Drift</h2>
+            
+        <section class="feature-group" aria-label="numeric features">
+            <h3>numeric features</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="status-column" scope="col">Status</th>
+                            <th scope="col">Feature</th>
+                            <th scope="col">PSI</th><th scope="col">Missing rate</th><th scope="col">JS div.</th><th scope="col">Wasserstein</th><th scope="col">KS test</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            <tr>
+                <td class="status-column"><span class="status-dot status-dot-passed" title="OK"></span></td>
+                <th class="feature-name" scope="row">age</th>
+                <td>
+        <div class="metric-value status-text-passed">
+            0.003
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.100</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.250</span></div>
+    </td><td>
+        <div class="metric-value status-text-passed">
+            0
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.010</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.020</span></div>
+    </td><td>
+        <div class="metric-value status-text-passed">
+            0.001
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.005</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.020</span></div>
+    </td><td>
+        <div class="metric-value status-text-passed">
+            0.175
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.586</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.634</span></div>
+    </td><td>
+        <div class="metric-value status-text-passed">
+            0.014
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.038</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.050</span></div>
+    </td>
+            </tr>
+            
+            <tr>
+                <td class="status-column"><span class="status-dot status-dot-warning" title="WARNING"></span></td>
+                <th class="feature-name" scope="row">income</th>
+                <td>
+        <div class="metric-value status-text-passed">
+            0.039
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.100</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.250</span></div>
+    </td><td>
+        <div class="metric-value status-text-passed">
+            0.010
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.010</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.020</span></div>
+    </td><td>
+        <div class="metric-value status-text-warning">
+            0.007
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.005</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.020</span></div>
+    </td><td>
+        <div class="metric-value status-text-passed">
+            nan
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.586</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.634</span></div>
+    </td><td>
+        <div class="metric-value status-text-passed">
+            nan
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.038</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.050</span></div>
+    </td>
+            </tr>
+            </tbody>
+                </table>
+            </div>
+        </section>
+    
+        <section class="feature-group" aria-label="categorical features">
+            <h3>categorical features</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="status-column" scope="col">Status</th>
+                            <th scope="col">Feature</th>
+                            <th scope="col">PSI</th><th scope="col">Missing rate</th><th scope="col">JS div.</th><th scope="col">Unseen rate</th><th scope="col">Card. ratio</th><th scope="col">χ²-test</th><th scope="col">Cramér&#x27;s V</th><th scope="col">Category churn</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            <tr>
+                <td class="status-column"><span class="status-dot status-dot-critical" title="CRITICAL"></span></td>
+                <th class="feature-name" scope="row">country</th>
+                <td>
+        <div class="metric-value status-text-critical">
+            2.193
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.100</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.250</span></div>
+    </td><td>
+        <div class="metric-value status-text-passed">
+            0
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.010</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.020</span></div>
+    </td><td>
+        <div class="metric-value status-text-critical">
+            0.184
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.005</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.020</span></div>
+    </td><td>
+        <div class="metric-value status-text-critical">
+            0.300
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.005</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.020</span></div>
+    </td><td>
+        <div class="metric-value status-text-passed">
+            0.002
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.020</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.050</span></div>
+    </td><td>
+        <div class="metric-value status-text-critical">
+            0
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.038</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.010</span></div>
+    </td><td>
+        <div class="metric-value status-text-critical">
+            0.521
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.024</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.050</span></div>
+    </td><td>
+        <div class="metric-value status-text-critical">
+            0.250
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.005</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.020</span></div>
+    </td>
+            </tr>
+            </tbody>
+                </table>
+            </div>
+        </section>
+    
+        </section>
+
+        
+        <section class="report-section" aria-labelledby="av-title">
+            <h2 id="av-title">Adversarial Validation</h2>
+            <div class="card-grid">
+        <article class="summary-card summary-card-overall status-critical">
+            <span class="summary-label">Adversarial validation</span>
+            <strong class="summary-value">CRITICAL</strong>
+            <span class="summary-details">Adversarial drift detected</span>
+        </article>
+    
+        <article class="summary-card summary-card-alert">
+            <span class="summary-label">ROC AUC</span>
+            <strong class="summary-value status-text-critical">0.765</strong>
+            <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.600</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.750</span></div>
+        </article>
+    </div>
+            <section class="feature-group" aria-label="Feature importance">
+                <h3>feature importance (top 10)</h3>
+                
+        <div class="table-wrapper">
+            <table class="feature-importance-table">
+                <thead><tr><th scope="col">Rank</th><th scope="col">Feature</th><th scope="col">Importance</th><th scope="col">Importance std.</th></tr></thead>
+                <tbody><tr><td>1</td><td>country</td><td>0.733</td><td>0.009</td></tr><tr><td>2</td><td>income</td><td>0.254</td><td>0.008</td></tr><tr><td>3</td><td>age</td><td>0.013</td><td>0.001</td></tr></tbody>
+            </table>
+        </div>
+    
+            </section>
+        </section>
+    
+
+        
+        <section class="report-section" aria-labelledby="prediction-title">
+            <h2 id="prediction-title">Prediction Drift</h2>
+            
+        <section class="feature-group" aria-label="Feature metrics">
+            
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="status-column" scope="col">Status</th>
+                            <th scope="col">Feature</th>
+                            <th scope="col">PSI</th><th scope="col">KS test</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            <tr>
+                <td class="status-column"><span class="status-dot status-dot-warning" title="WARNING"></span></td>
+                <th class="feature-name" scope="row">prediction</th>
+                <td>
+        <div class="metric-value status-text-passed">
+            0.010
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.100</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.250</span></div>
+    </td><td>
+        <div class="metric-value status-text-warning">
+            0.046
+        </div>
+        <div class="metric-thresholds"><span class="threshold threshold-warning"><span class="threshold-marker"></span>0.038</span><span class="threshold threshold-critical"><span class="threshold-marker"></span>0.050</span></div>
+    </td>
+            </tr>
+            </tbody>
+                </table>
+            </div>
+        </section>
+    
+        </section>
+        
+    </main>
+</body>
+</html>
