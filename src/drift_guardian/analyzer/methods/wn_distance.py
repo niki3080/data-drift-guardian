@@ -12,4 +12,4 @@ def compute_wasserstein_distance(reference_dict: ReferenceDict, current: pd.Seri
     assert isinstance(feature, str)
     raw_ref = reference_dict['sample'][feature].dropna()
 
-    return wasserstein_distance(raw_ref, current)
+    return wasserstein_distance(raw_ref, current.dropna())

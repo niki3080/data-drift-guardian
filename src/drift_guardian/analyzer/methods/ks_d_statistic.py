@@ -12,4 +12,4 @@ def compute_ks_d_statistic(reference_dict: ReferenceDict, current: pd.Series):
     assert isinstance(feature, str)
     raw_ref = reference_dict['sample'][feature].dropna()
 
-    return ks_d_statistic(raw_ref, current)
+    return ks_d_statistic(raw_ref, current.dropna())

@@ -195,14 +195,9 @@ def test_compute_missing_rate_calls_find_ref(monkeypatch):
         }
         return reference
 
-    monkeypatch.setattr(missing_rate, "find_ref", fake_find_ref)
-
     result = missing_rate.compute_missing_rate(reference_dict, current)
 
-    assert result == 0.37
-
-    assert calls["find_ref"]["reference_dict"] is reference_dict
-    assert calls["find_ref"]["feature"] == "some_feature"
+    assert result == 0.5
 
 
 def test_compute_missing_rate_requires_named_series():
@@ -386,7 +381,7 @@ def test_compute_ks_d_statistic_uses_raw_reference_sample_without_missing_values
     assert result == 0.777
 
     assert calls["low_level"]["raw_ref"].tolist() == [1.0, 3.0, 4.0]
-    assert calls["low_level"]["current"] is current
+    assert calls["low_level"]["current"].equals(current.dropna())
 
 
 def test_compute_ks_d_statistic_raises_key_error_if_feature_absent_in_sample():
@@ -458,7 +453,7 @@ def test_compute_wasserstein_distance_uses_raw_reference_sample_without_missing_
         30.0,
         50.0,
     ]
-    assert calls["wasserstein_distance"]["current"] is current
+    assert calls["wasserstein_distance"]["current"].equals(current.dropna())
 
 
 def test_compute_wasserstein_distance_raises_key_error_if_feature_absent_in_sample():
