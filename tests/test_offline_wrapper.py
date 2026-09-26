@@ -127,13 +127,14 @@ def install_offline_wrapper_fakes(
             return {"kind": "drift_report"}
 
         def run_adversarial_validation(
-            self,
-            current,
-            max_samples=100_000,
-            n_splits=3,
-            random_state=42,
-            missing_category="__missing__",
-            lightgbm_params=None,
+                self,
+                current,
+                max_samples=100_000,
+                n_splits=3,
+                random_state=42,
+                missing_category="__missing__",
+                lightgbm_params=None,
+                prediction_col=None,
         ):
             self.av_current = current.copy()
             self.av_kwargs = {
@@ -142,6 +143,7 @@ def install_offline_wrapper_fakes(
                 "random_state": random_state,
                 "missing_category": missing_category,
                 "lightgbm_params": lightgbm_params,
+                "prediction_col": prediction_col,
             }
             return {"kind": "av_report"}
 
@@ -363,6 +365,7 @@ def test_run_av_checks_schema_and_passes_required_columns_and_params(
         random_state=99,
         missing_category="__NA__",
         lightgbm_params=lightgbm_params,
+        prediction_col="score"
     )
 
     assert result == {"kind": "av_report"}
@@ -380,7 +383,9 @@ def test_run_av_checks_schema_and_passes_required_columns_and_params(
         "random_state": 99,
         "missing_category": "__NA__",
         "lightgbm_params": lightgbm_params,
+        "prediction_col": 'score',
     }
+    assert engine.av_kwargs["prediction_col"] == "score"
 
 
 def test_run_av_propagates_schema_checker_error(

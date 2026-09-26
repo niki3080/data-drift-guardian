@@ -213,6 +213,7 @@ def analyze_current_dataframe(
         return report, None
 
     cfg = runtime.config.adversarial_validation
+    prediction_col = runtime.config.prediction_metrics.score_column
     n_splits = cfg.n_splits or 3
     if len(current_df) < n_splits:
         return report, None
@@ -228,6 +229,7 @@ def analyze_current_dataframe(
             random_state=cfg.random_state if cfg.random_state is not None else 42,
             missing_category=cfg.missing_category or "__missing__",
             lightgbm_params=cfg.lightgbm.to_params(),
+            prediction_col=prediction_col
         )
     except Exception:
         logger.exception(

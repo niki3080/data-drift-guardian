@@ -752,3 +752,157 @@ def test_run_adversarial_validation_calls_function_with_expected_arguments(monke
     assert calls["random_state"] == 123
     assert calls["missing_category"] == "MISSING"
     assert calls["lightgbm_params"] == {"n_estimators": 10}
+
+
+def test_run_adversarial_validation_excludes_prediction_col_when_provided(monkeypatch):
+    reference_sample = pd.DataFrame(
+        {
+            "age": [10, 20, 30],
+            "city": ["A", "B", "C"],
+            "score": [0.1, 0.2, 0.3],
+        }
+    )
+
+    current = pd.DataFrame(
+        {
+            "age": [11, 22, 33],
+            "city": ["A", "B", "D"],
+            "score": [0.15, 0.25, 0.35],
+        }
+    )
+
+    expected_auc = 0.75
+
+    expected_importance = pd.DataFrame(
+        {
+            "feature": ["age", "city"],
+            "importance": [0.8, 0.2],
+            "importance_std": [0.1, 0.05],
+            "rank": [1, 2],
+        }
+    )
+
+    calls = {}
+
+    def fake_adversarial_validation(
+        reference,
+        current_arg,
+        *args,
+        **kwargs,
+    ):
+        calls["reference"] = reference
+        calls["current"] = current_arg
+
+        param_names = [
+            "max_samples",
+            "n_splits",
+            "random_state",
+            "missing_category",
+            "lightgbm_params",
+        ]
+
+        for index, name in enumerate(param_names):
+            if index < len(args):
+                calls[name] = args[index]
+            else:
+                calls[name] = kwargs.get(name)
+
+        return expected_auc, expected_importance
+
+    monkeypatch.setattr(
+        engine_module,
+        "adversarial_validation",
+        fake_adversarial_validation,
+    )
+
+    config = make_config()
+
+    reference_profile = {
+        "sample": reference_sample
+    }
+
+    engine = DriftMetricsEngine(config, reference_profile)
+
+    result_auc, result_importance = engine.run_adversarial_validation(
+        current,
+        max_samples=10,
+        n_splits=2,
+        random_state=123,
+        missing_category="MISSING",
+        lightgbm_params={"n_estimators": 10},
+        prediction_col="score",
+    )
+
+    assert result_auc == expected_auc
+    pd.testing.assert_frame_equal(result_importance, expected_importance)
+
+    # Проверяем, что prediction_col исключен из переданных данных
+    assert list(calls["reference"].columns) == ["age", "city"]
+    assert list(calls["current"].columns) == ["age", "city"]
+
+    pd.testing.assert_frame_equal(
+        calls["reference"],
+        reference_sample[["age", "city"]],
+    )
+    pd.testing.assert_frame_equal(
+        calls["current"],
+        current[["age", "city"]],
+    )
+
+    # Убеждаемся, что "score" не попал в вызов adversarial_validation
+    assert "score" not in calls["reference"].columns
+    assert "score" not in calls["current"].columns
+
+    assert calls["max_samples"] == 10
+    assert calls["n_splits"] == 2
+    assert calls["random_state"] == 123
+    assert calls["missing_category"] == "MISSING"
+    assert calls["lightgbm_params"] == {"n_estimators": 10}
+
+
+def test_run_adversarial_validation_prediction_col_none_is_noop(monkeypatch):
+    """
+    Проверяет, что при prediction_col=None (значение по умолчанию)
+    поведение идентично отсутствию параметра — reference и current
+    передаются как есть, без создания новых DataFrame (identity сохраняется).
+    """
+    reference_sample = pd.DataFrame(
+        {
+            "age": [10, 20, 30],
+            "city": ["A", "B", "C"],
+        }
+    )
+
+    current = pd.DataFrame(
+        {
+            "age": [11, 22, 33],
+            "city": ["A", "B", "D"],
+        }
+    )
+
+    calls = {}
+
+    def fake_adversarial_validation(reference, current_arg, *args, **kwargs):
+        calls["reference"] = reference
+        calls["current"] = current_arg
+        return 0.5, pd.DataFrame()
+
+    monkeypatch.setattr(
+        engine_module,
+        "adversarial_validation",
+        fake_adversarial_validation,
+    )
+
+    config = make_config()
+    reference_profile = {"sample": reference_sample}
+    engine = DriftMetricsEngine(config, reference_profile)
+
+    engine.run_adversarial_validation(
+        current,
+        prediction_col=None,
+    )
+
+    # identity должна сохраняться — без лишнего копирования/переупорядочивания
+    assert calls["reference"] is reference_sample
+    assert calls["current"] is current
+

@@ -109,6 +109,7 @@ class OfflineWrapper:
                random_state: int = 42,
                missing_category: str = "__missing__",
                lightgbm_params: dict[str, Any] | None = None,
+               prediction_col: str | None = None,
                ):
         logger.info(
             "Starting run_av: current.shape=%s, max_samples=%s, n_splits=%s, "
@@ -126,6 +127,7 @@ class OfflineWrapper:
                                                            random_state=random_state,
                                                            missing_category=missing_category,
                                                            lightgbm_params=lightgbm_params,
+                                                           prediction_col=prediction_col
                                                            )
         logger.info("run_av completed successfully")
         return av_report

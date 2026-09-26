@@ -65,21 +65,30 @@ class DriftMetricsEngine:
                                    n_splits: int = 3,
                                    random_state: int = 42,
                                    missing_category: str = "__missing__",
-                                   lightgbm_params: dict[str, Any] | None = None,):
+                                   lightgbm_params: dict[str, Any] | None = None,
+                                   prediction_col: str | None = None):
 
         logger.info(
             "Starting adversarial validation (max_samples=%d, n_splits=%d, random_state=%d)",
             max_samples, n_splits, random_state,
         )
-
         sample_df = self.reference_dict['sample']
-        av_results = adversarial_validation(sample_df,
-                                           current,
-                                           max_samples=max_samples,
-                                           n_splits=n_splits,
-                                           random_state=random_state,
-                                           missing_category=missing_category,
-                                           lightgbm_params=lightgbm_params)
+
+        if prediction_col is not None:
+            sample_cols = [c for c in sample_df.columns if c != prediction_col]
+            sample_input = sample_df[sample_cols]
+            current_input = current[sample_cols]
+        else:
+            sample_input = sample_df
+            current_input = current
+
+        av_results = adversarial_validation(sample_input,
+                                            current_input,
+                                            max_samples=max_samples,
+                                            n_splits=n_splits,
+                                            random_state=random_state,
+                                            missing_category=missing_category,
+                                            lightgbm_params=lightgbm_params)
 
         logger.info("Adversarial validation completed")
         logger.debug("Adversarial validation results: %s", av_results)
