@@ -28,6 +28,12 @@ dev = [
     "ipykernel>=7.3.0",
     "pytest>=9.1.1",
     "rich>=15.0.0",
+    {include-group = "test"},
+]
+test = [
+    "pytest>=9.1.1",
+    "pytest-timeout>=2.4.0",
+    "testcontainers[kafka]>=4.13.0",
 ]
 notebooks = [
     "evidently>=0.7.21",
@@ -42,9 +48,17 @@ known_first_party = ["drift_guardian"]
 src_paths = ["src", "tests", "monitoring"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+    "integration: интеграционные тесты, требуют Docker (testcontainers)",
+]
+timeout = 300
+timeout_method = "thread"
 filterwarnings = [
     "ignore::lightgbm.basic.LGBMDeprecationWarning",
 ]
+log_cli_level = "INFO"
+
 
